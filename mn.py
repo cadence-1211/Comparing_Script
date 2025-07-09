@@ -20,7 +20,7 @@ def is_valid_instance_line(line):
     line = line.strip()
     if not line or line.startswith(b"#") or META_RE.match(line):
         return False
-    return line.startswith(b"-")
+    return True  # Accept all lines unless they're meta/comments/empty
 
 def find_start_offset(mmapped_file):
     mmapped_file.seek(0)
@@ -31,7 +31,7 @@ def find_start_offset(mmapped_file):
             return pos
     return 0
 
-def parse_file_for_instances(file_path, inst_col, value_col, starts_with):
+def parse_file_for_instances(file_path, inst_col, value_col):
     instance_map = {}
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
@@ -46,11 +46,6 @@ def parse_file_for_instances(file_path, inst_col, value_col, starts_with):
             inst = parts[inst_col]
             val = parts[value_col]
 
-            if starts_with and inst.startswith(starts_with.encode()):
-                inst = inst[len(starts_with):]
-            if not inst:
-                continue
-
             key = inst.decode(errors="ignore").strip().lower()
             value = val.decode(errors="ignore").strip()
             instance_map[key] = value
@@ -58,19 +53,19 @@ def parse_file_for_instances(file_path, inst_col, value_col, starts_with):
         mmapped_file.close()
     return instance_map
 
-def compare_instances(inst1, inst2):
-    set1 = set(inst1.keys())
-    set2 = set(inst2.keys())
-    missing_in_file2 = sorted(set1 - set2)
-    missing_in_file1 = sorted(set2 - set1)
-    return missing_in_file2, missing_in_file1
-
 def extract_numeric(value):
     try:
         match = re.search(r"-?\d+\.?\d*", value)
         return float(match.group()) if match else None
     except:
         return None
+
+def compare_instances(inst1, inst2):
+    set1 = set(inst1.keys())
+    set2 = set(inst2.keys())
+    missing_in_file2 = sorted(set1 - set2)
+    missing_in_file1 = sorted(set2 - set1)
+    return missing_in_file2, missing_in_file1
 
 def write_csv_comparison(file1_data, file2_data, output_path):
     matched_keys = sorted(set(file1_data.keys()) & set(file2_data.keys()))
@@ -88,64 +83,53 @@ def write_csv_comparison(file1_data, file2_data, output_path):
                 pct_dev = (diff / v1 * 100) if v1 != 0 else float("inf")
                 writer.writerow([inst, v1, v2, diff, round(pct_dev, 2)])
 
-def count_lines(path):
-    with open(path, 'rb') as f:
-        return sum(1 for _ in f)
-
-def get_column_name(file_path, col_index):
-    with open(file_path, 'r') as f:
-        for line in f:
-            if line.strip() and not line.startswith("#"):
-                headers = line.strip().split()
-                if len(headers) > col_index:
-                    return headers[col_index]
-                else:
-                    return f"Column {col_index + 1}"
-    return f"Column {col_index + 1}"
-
 def main():
-    parser = argparse.ArgumentParser(description="Compare matching instance values from two files")
+    parser = argparse.ArgumentParser(description="Compare instance values from two files")
     parser.add_argument("--file1", help="Path to first file")
-    parser.add_argument("--inst_col1", type=int, help="Instance column index in file1")
-    parser.add_argument("--val_col1", type=int, help="Value column index in file1")
+    parser.add_argument("--inst_col1", type=int, help="Instance column index (1-based) in file1")
+    parser.add_argument("--val_col1", type=int, help="Value column index (1-based) in file1")
     parser.add_argument("--file2", help="Path to second file")
-    parser.add_argument("--inst_col2", type=int, help="Instance column index in file2")
-    parser.add_argument("--val_col2", type=int, help="Value column index in file2")
-    parser.add_argument("--starts-with1", default=None)
-    parser.add_argument("--starts-with2", default=None)
+    parser.add_argument("--inst_col2", type=int, help="Instance column index (1-based) in file2")
+    parser.add_argument("--val_col2", type=int, help="Value column index (1-based) in file2")
+
     args = parser.parse_args()
 
+    # Prompt user interactively if any input is missing
     if not args.file1:
-        args.file1 = input("Enter path to first file: ")
+        args.file1 = input("Enter path to first file: ").strip()
     if args.inst_col1 is None:
-        args.inst_col1 = int(input("Enter instance column index for file1: "))
+        args.inst_col1 = int(input("Enter instance column index for file1 (1-based): ").strip())
     if args.val_col1 is None:
-        args.val_col1 = int(input("Enter value column index for file1: "))
+        args.val_col1 = int(input("Enter value column index for file1 (1-based): ").strip())
 
     if not args.file2:
-        args.file2 = input("Enter path to second file: ")
+        args.file2 = input("Enter path to second file: ").strip()
     if args.inst_col2 is None:
-        args.inst_col2 = int(input("Enter instance column index for file2: "))
+        args.inst_col2 = int(input("Enter instance column index for file2 (1-based): ").strip())
     if args.val_col2 is None:
-        args.val_col2 = int(input("Enter value column index for file2: "))
+        args.val_col2 = int(input("Enter value column index for file2 (1-based): ").strip())
 
-    file1_name = os.path.basename(args.file1)
-    file2_name = os.path.basename(args.file2)
+    # Convert to 0-based index
+    inst_col1 = args.inst_col1 - 1
+    val_col1 = args.val_col1 - 1
+    inst_col2 = args.inst_col2 - 1
+    val_col2 = args.val_col2 - 1
 
+    # Start measuring
     proc = psutil.Process(os.getpid())
     mem_before = proc.memory_info().rss
     t0 = time.time()
 
-    file1_data = parse_file_for_instances(args.file1, args.inst_col1, args.val_col1, args.starts_with1)
-    file2_data = parse_file_for_instances(args.file2, args.inst_col2, args.val_col2, args.starts_with2)
+    file1_data = parse_file_for_instances(args.file1, inst_col1, val_col1)
+    file2_data = parse_file_for_instances(args.file2, inst_col2, val_col2)
 
     miss2, miss1 = compare_instances(file1_data, file2_data)
 
     with open("missing_instances.txt", "w") as out:
-        out.write(f"{'='*60}\nMissing in {file2_name}:\n{'='*60}\n")
+        out.write(f"{'='*60}\nMissing in {os.path.basename(args.file2)}:\n{'='*60}\n")
         for m in miss2:
             out.write(m + "\n")
-        out.write(f"\n{'='*60}\nMissing in {file1_name}:\n{'='*60}\n")
+        out.write(f"\n{'='*60}\nMissing in {os.path.basename(args.file1)}:\n{'='*60}\n")
         for m in miss1:
             out.write(m + "\n")
 
