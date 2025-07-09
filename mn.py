@@ -109,6 +109,20 @@ def write_csv_comparison(file1_data, file2_data, output_path):
                 writer.writerow([inst, v1, v2, diff, round(pct_dev, 2)])
 
 
+def write_missing_instances(file1_data, file2_data, file1_name, file2_name):
+    keys1 = set(file1_data.keys())
+    keys2 = set(file2_data.keys())
+
+    with open("missing_instances.txt", "w") as out:
+        out.write(f"{'='*60}\nMissing in {file2_name}:\n{'='*60}\n")
+        for inst in sorted(keys1 - keys2):
+            out.write(inst + "\n")
+
+        out.write(f"\n{'='*60}\nMissing in {file1_name}:\n{'='*60}\n")
+        for inst in sorted(keys2 - keys1):
+            out.write(inst + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Universal file comparator based on column values")
     parser.add_argument("--file1", help="Path to first file")
@@ -136,16 +150,7 @@ def main():
     file1_data = parse_file(args.file1, args.inst_col1, args.val_col1, args.starts_with1)
     file2_data = parse_file(args.file2, args.inst_col2, args.val_col2, args.starts_with2)
 
-    miss2, miss1 = compare_instances(file1_data, file2_data)
-
-    with open("missing_instances.txt", "w") as out:
-        out.write(f"{'='*60}\nMissing in {os.path.basename(args.file2)}:\n{'='*60}\n")
-        for m in miss2:
-            out.write(m + "\n")
-        out.write(f"\n{'='*60}\nMissing in {os.path.basename(args.file1)}:\n{'='*60}\n")
-        for m in miss1:
-            out.write(m + "\n")
-
+    write_missing_instances(file1_data, file2_data, os.path.basename(args.file1), os.path.basename(args.file2))
     write_csv_comparison(file1_data, file2_data, "instance_comparison.csv")
 
     t1 = time.time()
