@@ -5,6 +5,8 @@ import psutil
 import sys
 import mmap
 import re
+import csv
+from concurrent.futures import ThreadPoolExecutor
 
 # Metadata keywords to skip
 METADATA_KEYWORDS = {
@@ -25,7 +27,7 @@ def is_valid_instance_line(line):
 def find_start_offset(mmapped_file):
     instance_lines = 0
     mmapped_file.seek(0)
-    for _ in range(5000):
+    for _ in range(1000):
         pos = mmapped_file.tell()
         line = mmapped_file.readline()
         if is_valid_instance_line(line):
@@ -34,8 +36,8 @@ def find_start_offset(mmapped_file):
                 return pos
     return 0
 
-def parse_file_with_mmap(file_path, column_index, starts_with):
-    instances = []
+def parse_file_with_mmap_to_dict(file_path, inst_col, data_col):
+    result = {}
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         start_offset = find_start_offset(mmapped_file)
@@ -45,76 +47,42 @@ def parse_file_with_mmap(file_path, column_index, starts_with):
             if not is_valid_instance_line(line):
                 continue
             parts = line.strip().split()
-            if len(parts) <= column_index:
+            if len(parts) <= max(inst_col, data_col):
                 continue
-            value = parts[column_index]
-            if starts_with and value.startswith(starts_with.encode()):
-                value = value[len(starts_with):]
-                if not value:
-                    continue
-            instances.append(value)
+            inst = parts[inst_col]
+            data = parts[data_col]
+            if inst.startswith(b"-"):
+                inst = inst[1:]
+            try:
+                decoded_inst = inst.decode(errors='ignore')
+                decoded_data = float(data.decode(errors='ignore'))
+                result[decoded_inst] = decoded_data
+            except:
+                continue
         mmapped_file.close()
-    return [v.decode(errors='ignore') for v in instances]
-
-def compare_instances(instances1, instances2):
-    set1 = set(instances1)
-    set2 = set(instances2)
-    missing_in_file2 = [i for i in instances1 if i not in set2]
-    missing_in_file1 = [i for i in instances2 if i not in set1]
-    return missing_in_file2, missing_in_file1
+    return result
 
 def count_lines(path):
     with open(path, 'rb') as f:
         return sum(1 for _ in f)
 
-def get_column_name(file_path, col_index):
-    with open(file_path, 'r') as f:
-        for line in f:
-            if line.strip() and not line.startswith("#"):
-                headers = line.strip().split()
-                if len(headers) > col_index:
-                    return headers[col_index]
-                else:
-                    return f"Column {col_index + 1}"
-    return f"Column {col_index + 1}"
-
 def main():
-    parser = argparse.ArgumentParser(description="Compare two files and report missing instances + stats")
-    parser.add_argument("--file1", help="Path to first file")
-    parser.add_argument("--col1", type=int, help="0-based column index in file1")
-    parser.add_argument("--file2", help="Path to second file")
-    parser.add_argument("--col2", type=int, help="0-based column index in file2")
-    parser.add_argument("--starts-with1", default=None)
-    parser.add_argument("--starts-with2", default=None)
-    args = parser.parse_args()
+    args = argparse.Namespace()
+    args.file1 = input("Enter path to first file: ")
+    args.inst_col1 = int(input("Enter column index (0-based) for instance name in file1: "))
+    args.data_col1 = int(input("Enter column index (0-based) for data value in file1: "))
 
-    if not args.file1:
-        args.file1 = input("Enter path to first file: ")
-    if args.col1 is None:
-        try:
-            args.col1 = int(input("Enter column to be compared in file1: "))
-        except ValueError:
-            print("Invalid column number for file1.")
-            sys.exit(1)
-    if not args.file2:
-        args.file2 = input("Enter path to second file: ")
-    if args.col2 is None:
-        try:
-            args.col2 = int(input("Enter column to be compared in file2: "))
-        except ValueError:
-            print("Invalid column number for file2.")
-            sys.exit(1)
+    args.file2 = input("Enter path to second file: ")
+    args.inst_col2 = int(input("Enter column index (0-based) for instance name in file2: "))
+    args.data_col2 = int(input("Enter column index (0-based) for data value in file2: "))
 
     file1_name = os.path.basename(args.file1)
     file2_name = os.path.basename(args.file2)
 
-    col_name1 = get_column_name(args.file1, args.col1)
-    col_name2 = get_column_name(args.file2, args.col2)
-
-    print("Comparing Columns")
+    print("Comparing Files")
     print("=" * 35)
-    print(f"  • From {file1_name}: {col_name1} (Column {args.col1 + 1})")
-    print(f"  • From {file2_name}: {col_name2} (Column {args.col2 + 1})")
+    print(f"  • From {file1_name}: instance column {args.inst_col1 + 1}, value column {args.data_col1 + 1}")
+    print(f"  • From {file2_name}: instance column {args.inst_col2 + 1}, value column {args.data_col2 + 1}")
 
     proc = psutil.Process(os.getpid())
     mem_before = proc.memory_info().rss
@@ -123,32 +91,43 @@ def main():
     lines1 = count_lines(args.file1)
     lines2 = count_lines(args.file2)
 
-    list1 = parse_file_with_mmap(args.file1, args.col1, args.starts_with1)
-    list2 = parse_file_with_mmap(args.file2, args.col2, args.starts_with2)
+    with ThreadPoolExecutor() as executor:
+        f1 = executor.submit(parse_file_with_mmap_to_dict, args.file1, args.inst_col1, args.data_col1)
+        f2 = executor.submit(parse_file_with_mmap_to_dict, args.file2, args.inst_col2, args.data_col2)
+        dict1 = f1.result()
+        dict2 = f2.result()
 
-    miss2, miss1 = compare_instances(list1, list2)
+    # Comparison and CSV Output
+    matched_instances = sorted(set(dict1.keys()) & set(dict2.keys()))
+    csv_path = "matched_instance_comparison.csv"
+    with open(csv_path, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Instance", f"{file1_name} Value", f"{file2_name} Value", "Difference", "% Deviation"])
+        for inst in matched_instances:
+            v1 = dict1[inst]
+            v2 = dict2[inst]
+            diff = v1 - v2
+            deviation = (diff / v2 * 100) if v2 != 0 else float('inf')
+            writer.writerow([inst, v1, v2, diff, round(deviation, 2)])
+
+    # Missing instance report
+    miss2 = sorted(set(dict1.keys()) - set(dict2.keys()))
+    miss1 = sorted(set(dict2.keys()) - set(dict1.keys()))
 
     out_path = "missing_instances.txt"
     with open(out_path, "w") as out:
-        out.write(f"{'='*60}\n")
-        out.write(f"Instances missing from {file2_name}:\n")
-        out.write(f"{'='*60}\n")
-        for inst in miss2:
-            out.write(f"{inst}\n")
-        out.write(f"\n{'='*60}\n")
-        out.write(f"Instances missing from {file1_name}:\n")
-        out.write(f"{'='*60}\n")
-        for inst in miss1:
-            out.write(f"{inst}\n")
+        out.write(f"{'='*60}\nInstances missing from {file2_name}:\n{'='*60}\n")
+        out.writelines([f"{inst}\n" for inst in miss2])
+        out.write(f"\n{'='*60}\nInstances missing from {file1_name}:\n{'='*60}\n")
+        out.writelines([f"{inst}\n" for inst in miss1])
 
-    missing_count = len(miss1) + len(miss2)
     t1 = time.time()
     mem_after = proc.memory_info().rss
 
-    print("Summary of Missing Instances")
+    print("Comparison Completed")
     print("=" * 35)
-    print(f"→ {missing_count} missing instance(s) saved in '{out_path}'")
-
+    print(f"→ {len(matched_instances)} matching instances saved in '{csv_path}'")
+    print(f"→ {len(miss1) + len(miss2)} missing instance(s) saved in '{out_path}'")
     print("Statistics")
     print("=" * 35)
     print(f"  • Lines in {file1_name}: {lines1}")
