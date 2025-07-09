@@ -5,6 +5,7 @@ import psutil
 import sys
 import mmap
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 # Metadata keywords to skip
 METADATA_KEYWORDS = {
@@ -25,7 +26,7 @@ def is_valid_instance_line(line):
 def find_start_offset(mmapped_file):
     instance_lines = 0
     mmapped_file.seek(0)
-    for _ in range(1000):  # reduced from 5000 for faster detection
+    for _ in range(1000):
         pos = mmapped_file.tell()
         line = mmapped_file.readline()
         if is_valid_instance_line(line):
@@ -34,27 +35,32 @@ def find_start_offset(mmapped_file):
                 return pos
     return 0
 
-def parse_file_with_mmap_to_set(file_path, column_index, starts_with):
-    instance_set = set()
+def parse_file_with_mmap(file_path, column_index, starts_with, limit=None):
+    instances = set()
+    line_count = 0
+    prefix = starts_with.encode() if starts_with else None
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         start_offset = find_start_offset(mmapped_file)
         mmapped_file.seek(start_offset)
 
         for line in iter(mmapped_file.readline, b""):
+            if limit and line_count >= limit:
+                break
             if not is_valid_instance_line(line):
                 continue
             parts = line.strip().split()
             if len(parts) <= column_index:
                 continue
             value = parts[column_index]
-            if starts_with and value.startswith(starts_with.encode()):
-                value = value[len(starts_with):]
+            if prefix and value.startswith(prefix):
+                value = value[len(prefix):]
                 if not value:
                     continue
-            instance_set.add(value.decode(errors='ignore'))
+            instances.add(value.decode(errors='ignore'))
+            line_count += 1
         mmapped_file.close()
-    return instance_set
+    return instances
 
 def count_lines(path):
     with open(path, 'rb') as f:
@@ -79,6 +85,8 @@ def main():
     parser.add_argument("--col2", type=int, help="0-based column index in file2")
     parser.add_argument("--starts-with1", default=None)
     parser.add_argument("--starts-with2", default=None)
+    parser.add_argument("--limit", type=int, default=None, help="Optional line limit for parsing")
+    parser.add_argument("--skip-linecount", action="store_true", help="Skip full file line counting for speed")
     args = parser.parse_args()
 
     if not args.file1:
@@ -113,11 +121,17 @@ def main():
     mem_before = proc.memory_info().rss
     t0 = time.time()
 
-    lines1 = count_lines(args.file1)
-    lines2 = count_lines(args.file2)
+    if args.skip_linecount:
+        lines1 = lines2 = -1
+    else:
+        lines1 = count_lines(args.file1)
+        lines2 = count_lines(args.file2)
 
-    set1 = parse_file_with_mmap_to_set(args.file1, args.col1, args.starts_with1)
-    set2 = parse_file_with_mmap_to_set(args.file2, args.col2, args.starts_with2)
+    with ThreadPoolExecutor() as executor:
+        f1 = executor.submit(parse_file_with_mmap, args.file1, args.col1, args.starts_with1, args.limit)
+        f2 = executor.submit(parse_file_with_mmap, args.file2, args.col2, args.starts_with2, args.limit)
+        set1 = f1.result()
+        set2 = f2.result()
 
     miss2 = sorted(set1 - set2)
     miss1 = sorted(set2 - set1)
@@ -143,8 +157,9 @@ def main():
 
     print("Statistics")
     print("=" * 35)
-    print(f"  • Lines in {file1_name}: {lines1}")
-    print(f"  • Lines in {file2_name}: {lines2}")
+    if lines1 != -1:
+        print(f"  • Lines in {file1_name}: {lines1}")
+        print(f"  • Lines in {file2_name}: {lines2}")
     print(f"  • Time elapsed         : {t1 - t0:.4f} seconds")
     print(f"  • Memory usage change  : {(mem_after - mem_before)/(1024*1024):.4f} MB")
 
