@@ -14,44 +14,38 @@ METADATA_KEYWORDS = {
     "WINDOW", "RP_VALUE", "RP_FORMAT", "RP_INST_LIMIT", "RP_THRESHOLD",
     "RP_PIN_NAME", "MICRON_UNITS", "INST_NAME"
 }
+
 META_RE = re.compile(rb"^(%s)" % b"|".join(k.encode() for k in METADATA_KEYWORDS))
 
-def is_valid_instance_line(line):
+
+def is_valid_data_line(line):
     line = line.strip()
     if not line or line.startswith(b"#") or META_RE.match(line):
         return False
-    return True  # Accept all lines unless they're meta/comments/empty
+    if line.startswith(b"-") or len(line.split()) >= 2:
+        return True
+    return False
+
 
 def find_start_offset(mmapped_file):
+    instance_lines = 0
     mmapped_file.seek(0)
     for _ in range(5000):
         pos = mmapped_file.tell()
         line = mmapped_file.readline()
-        if is_valid_instance_line(line):
-            return pos
+        if is_valid_data_line(line):
+            instance_lines += 1
+            if instance_lines >= 25:
+                return pos
     return 0
 
-def parse_file_for_instances(file_path, inst_col, value_col):
-    instance_map = {}
-    with open(file_path, "rb") as f:
-        mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        mmapped_file.seek(find_start_offset(mmapped_file))
 
-        for line in iter(mmapped_file.readline, b""):
-            if not is_valid_instance_line(line):
-                continue
-            parts = line.strip().split()
-            if len(parts) <= max(inst_col, value_col):
-                continue
-            inst = parts[inst_col]
-            val = parts[value_col]
+def extract_value(parts, index):
+    try:
+        return parts[index].decode(errors="ignore")
+    except:
+        return ""
 
-            key = inst.decode(errors="ignore").strip().lower()
-            value = val.decode(errors="ignore").strip()
-            instance_map[key] = value
-
-        mmapped_file.close()
-    return instance_map
 
 def extract_numeric(value):
     try:
@@ -60,12 +54,43 @@ def extract_numeric(value):
     except:
         return None
 
+
+def parse_file(file_path, inst_col, val_col, starts_with):
+    instance_map = {}
+    with open(file_path, "rb") as f:
+        mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        mmapped_file.seek(find_start_offset(mmapped_file))
+
+        for line in iter(mmapped_file.readline, b""):
+            if not is_valid_data_line(line):
+                continue
+            parts = line.strip().split()
+            if len(parts) <= max(inst_col, val_col):
+                continue
+
+            inst = extract_value(parts, inst_col)
+            val = extract_value(parts, val_col)
+
+            if starts_with and inst.startswith(starts_with):
+                inst = inst[len(starts_with):]
+
+            inst = inst.strip().lower()
+            val = val.strip()
+
+            if inst:
+                instance_map[inst] = val
+
+        mmapped_file.close()
+    return instance_map
+
+
 def compare_instances(inst1, inst2):
     set1 = set(inst1.keys())
     set2 = set(inst2.keys())
     missing_in_file2 = sorted(set1 - set2)
     missing_in_file1 = sorted(set2 - set1)
     return missing_in_file2, missing_in_file1
+
 
 def write_csv_comparison(file1_data, file2_data, output_path):
     matched_keys = sorted(set(file1_data.keys()) & set(file2_data.keys()))
@@ -83,45 +108,33 @@ def write_csv_comparison(file1_data, file2_data, output_path):
                 pct_dev = (diff / v1 * 100) if v1 != 0 else float("inf")
                 writer.writerow([inst, v1, v2, diff, round(pct_dev, 2)])
 
-def main():
-    parser = argparse.ArgumentParser(description="Compare instance values from two files")
-    parser.add_argument("--file1", help="Path to first file")
-    parser.add_argument("--inst_col1", type=int, help="Instance column index (1-based) in file1")
-    parser.add_argument("--val_col1", type=int, help="Value column index (1-based) in file1")
-    parser.add_argument("--file2", help="Path to second file")
-    parser.add_argument("--inst_col2", type=int, help="Instance column index (1-based) in file2")
-    parser.add_argument("--val_col2", type=int, help="Value column index (1-based) in file2")
 
+def main():
+    parser = argparse.ArgumentParser(description="Universal file comparator based on column values")
+    parser.add_argument("--file1", help="Path to first file")
+    parser.add_argument("--inst_col1", type=int, help="Instance column index in file1")
+    parser.add_argument("--val_col1", type=int, help="Value column index in file1")
+    parser.add_argument("--file2", help="Path to second file")
+    parser.add_argument("--inst_col2", type=int, help="Instance column index in file2")
+    parser.add_argument("--val_col2", type=int, help="Value column index in file2")
+    parser.add_argument("--starts-with1", default="")
+    parser.add_argument("--starts-with2", default="")
     args = parser.parse_args()
 
-    # Prompt user interactively if any input is missing
-    if not args.file1:
-        args.file1 = input("Enter path to first file: ").strip()
-    if args.inst_col1 is None:
-        args.inst_col1 = int(input("Enter instance column index for file1 (1-based): ").strip())
-    if args.val_col1 is None:
-        args.val_col1 = int(input("Enter value column index for file1 (1-based): ").strip())
+    for arg_name in ["file1", "file2"]:
+        if getattr(args, arg_name) is None:
+            setattr(args, arg_name, input(f"Enter path to {arg_name}: "))
+    for arg_name in ["inst_col1", "val_col1", "inst_col2", "val_col2"]:
+        if getattr(args, arg_name) is None:
+            setattr(args, arg_name, int(input(f"Enter {arg_name.replace('_', ' ')}: ")))
 
-    if not args.file2:
-        args.file2 = input("Enter path to second file: ").strip()
-    if args.inst_col2 is None:
-        args.inst_col2 = int(input("Enter instance column index for file2 (1-based): ").strip())
-    if args.val_col2 is None:
-        args.val_col2 = int(input("Enter value column index for file2 (1-based): ").strip())
-
-    # Convert to 0-based index
-    inst_col1 = args.inst_col1 - 1
-    val_col1 = args.val_col1 - 1
-    inst_col2 = args.inst_col2 - 1
-    val_col2 = args.val_col2 - 1
-
-    # Start measuring
+    print("\n📊 Parsing and comparing...")
     proc = psutil.Process(os.getpid())
     mem_before = proc.memory_info().rss
     t0 = time.time()
 
-    file1_data = parse_file_for_instances(args.file1, inst_col1, val_col1)
-    file2_data = parse_file_for_instances(args.file2, inst_col2, val_col2)
+    file1_data = parse_file(args.file1, args.inst_col1, args.val_col1, args.starts_with1)
+    file2_data = parse_file(args.file2, args.inst_col2, args.val_col2, args.starts_with2)
 
     miss2, miss1 = compare_instances(file1_data, file2_data)
 
@@ -138,12 +151,13 @@ def main():
     t1 = time.time()
     mem_after = proc.memory_info().rss
 
-    print("\nSummary")
-    print("=" * 35)
-    print(f"  • Missing instances saved in: 'missing_instances.txt'")
-    print(f"  • Comparison CSV saved in:    'instance_comparison.csv'")
-    print(f"  • Time elapsed               : {t1 - t0:.4f} sec")
-    print(f"  • Memory usage change        : {(mem_after - mem_before) / (1024 * 1024):.4f} MB")
+    print("\n✅ Summary")
+    print("=" * 40)
+    print(f"• Missing instances saved in: 'missing_instances.txt'")
+    print(f"• Value comparison saved in : 'instance_comparison.csv'")
+    print(f"• Time taken               : {t1 - t0:.3f} sec")
+    print(f"• Memory usage change      : {(mem_after - mem_before) / (1024 * 1024):.3f} MB")
+
 
 if __name__ == "__main__":
     main()
