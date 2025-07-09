@@ -1,0 +1,625 @@
+*----------------------------------------------------------------------------------------
+*	Voltus IC Power Integrity Solution 23.14-s096_1 (64bit) 06/18/2025 12:53 (Linux 3.10.0-693.el7.x86_64)
+*	
+*
+* 	Date & Time:	2025-Jun-26 22:33:10 (2025-Jun-27 05:33:10 GMT)
+*
+*----------------------------------------------------------------------------------------
+*
+*	Design: super_filter
+*
+*	Liberty Libraries used: 
+*	        AV_wc_on: /home/ishaans/LAB/voltus_labs_CUI/design/postRouteOpt.design.dat/libs/mmmc/slow.lib_ecsm
+*	        AV_wc_on: /home/ishaans/LAB/voltus_labs_CUI/design/postRouteOpt.design.dat/libs/mmmc/pll.lib
+*	        AV_wc_on: /home/ishaans/LAB/voltus_labs_CUI/design/postRouteOpt.design.dat/libs/mmmc/bufao.lib
+*	        AV_wc_on: /home/ishaans/LAB/voltus_labs_CUI/design/postRouteOpt.design.dat/libs/mmmc/pso_header.lib
+*	        AV_wc_on: /home/ishaans/LAB/voltus_labs_CUI/design/postRouteOpt.design.dat/libs/mmmc/pso_ring.lib
+*
+*	Power Domain used: 
+*              Rail:     VDD_AO      Voltage:        0.9 
+*              Rail: VDD_column      Voltage:        0.9 
+*              Rail:   VDD_ring      Voltage:        0.9 
+*              Rail: VDD_external      Voltage:        0.9 
+*
+*	Parasitic Files used: 
+*	        ../design/postRouteOpt_RC_wc_125.spef.gz
+*
+*	DEF Files used: 
+*	        ../design/postRouteOpt.design.dat/super_filter.def.gz
+*
+*       Power View : AV_wc_on
+*
+*       WARNING Un-annotated User-Defined: net rst activity : 0.25
+*
+*       WARNING Un-annotated User-Defined: pin column/RC_CG_HIER_INST4/RC_CGIC_INST/ECK activity : 0.1
+*
+*       WARNING Un-annotated User-Defined: pin column/RC_CG_HIER_INST5/RC_CGIC_INST/ECK activity : 0.1
+*
+*       WARNING Un-annotated User-Defined: pin RC_CG_DECLONE_HIER_INST80/RC_CGIC_INST/ECK activity : 0.1
+*
+*       WARNING Un-annotated User-Defined: pin ring/RC_CG_HIER_INST8/RC_CGIC_INST/ECK activity : 0.1
+*
+*       WARNING Un-annotated User-Defined: pin ring/RC_CG_HIER_INST9/RC_CGIC_INST/ECK activity : 0.1
+*
+*       WARNING Un-annotated User-Defined: pin RC_CG_DECLONE_HIER_INST/RC_CGIC_INST/ECK activity : 0.1
+*
+*       User-Defined Activity : N.A.
+*
+*       Activity File: N.A.
+*
+*       Hierarchical Global Activity: N.A.
+*
+*       Global Activity: N.A.
+*
+*       Sequential Element Activity: 0.200000
+*
+*       Primary Input Activity: 0.300000
+*
+*       Default icg ratio: N.A.
+*
+*       Global Comb ClockGate Ratio: N.A.
+*
+*       Global ClockGate Output: 0.500000
+*
+*	Power Units = 1mW
+*
+*	Time Units = 1e-09 secs 
+*
+*       report_power -outfile clk.rpt -sort total -cell_type all -clock_network  pll_clk 
+*
+-----------------------------------------------------------------------------------------
+
+
+Total Power 
+-----------------------------------------------------------------------------------------
+Total Internal Power:        1.92878094 	   74.3594%
+Total Switching Power:       0.43628741 	   16.8200%
+Total Leakage Power:         0.22879451 	    8.8206%
+Total Power:                 2.59386286 
+-----------------------------------------------------------------------------------------
+
+
+Group                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+Sequential                          1.24     0.06236       0.155       1.458        56.2 
+Macro                                  0    0.001923           0    0.001923     0.07414 
+IO                                     0           0           0           0           0 
+Combinational                     0.5232      0.2778     0.06186      0.8628       33.26 
+Clock (Combinational)             0.1548     0.09177     0.01079      0.2574       9.922 
+Clock (Sequential)               0.01034    0.002453    0.001092     0.01388      0.5353 
+-----------------------------------------------------------------------------------------
+Total                              1.929      0.4363      0.2288       2.594         100 
+-----------------------------------------------------------------------------------------
+
+
+Clock                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+pll_clk                           0.1386     0.09351     0.01115      0.2432       9.377 
+io_clk                            0.1386     0.09351     0.01115      0.2432       9.377 
+ref_clk                          0.01774     0.00351    0.000367     0.02161      0.8332 
+test_clk                          0.1474     0.09263     0.01152      0.2516       9.698 
+-----------------------------------------------------------------------------------------
+Total (excluding duplicates)      0.1651     0.09614     0.01189      0.2732       10.53 
+-----------------------------------------------------------------------------------------
+Clock: pll_clk
+Clock Period: 0.016000 usec 
+Clock Toggle Rate:   125.0000 Mhz 
+Clock Static Probability:  0.5000
+
+Clock: io_clk
+Clock Period: 0.008000 usec 
+Clock Toggle Rate:   250.0000 Mhz 
+Clock Static Probability:  0.5000
+
+Clock: ref_clk
+Clock Period: 0.008000 usec 
+Clock Toggle Rate:   250.0000 Mhz 
+Clock Static Probability:  0.5000
+
+Clock: test_clk
+Clock Period: 0.016000 usec 
+Clock Toggle Rate:   125.0000 Mhz 
+Clock Static Probability:  0.5000
+
+
+
+Rail                  Voltage   Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+VDD_ring                  0.9     0.4499     0.07934     0.04421      0.5734       22.11 
+VDD_external              0.9     0.3152     0.08376     0.04475      0.4437       17.11 
+VDD_column                0.9     0.3088     0.07976     0.04442       0.433       16.69 
+VDD_AO                    0.9      0.855      0.1934     0.09541       1.144        44.1 
+
+
+Instance                      Max Toggles   Total Toggles   Internal   Switching     Leakage       Total  Percentage    Cell
+                              Input Pins    Output Pins     Power      Power         Power         Power  (%)           Name
+----------------------------------------------------------------------------------------------------------------------------
+ref_clk__L1_I0                    2.5e+08         2.5e+08    0.01774    0.001586    0.000367     0.01969      0.7591    CLKBUFX20
+test_clk__L1_I0                  1.25e+08        1.25e+08   0.008848    0.001047    0.000367     0.01026      0.3956    CLKBUFX20
+AO2/clk__Fence_N0__L1_I0         6.25e+07        6.25e+07   0.004361    0.004816    0.000367    0.009545       0.368    CLKBUFX20
+column/clk__FENCE_MSV_Fence_I_N0__L2_I1
+                                 6.25e+07        6.25e+07   0.004376    0.004774    0.000367    0.009517      0.3669    CLKBUFX20
+column/clk__FENCE_MSV_Fence_I_N0__L2_I0
+                                 6.25e+07        6.25e+07   0.004376     0.00472    0.000367    0.009463      0.3648    CLKBUFX20
+column/clk__FENCE_MSV_Fence_I_N0__L2_I2
+                                 6.25e+07        6.25e+07   0.004376    0.004672    0.000367    0.009415       0.363    CLKBUFX20
+AO2/clk__Fence_N0__L1_I1         6.25e+07        6.25e+07   0.004356    0.004088    0.000367    0.008811      0.3397    CLKBUFX20
+AO2/clk__Fence_N0__L1_I2         6.25e+07        6.25e+07   0.004347    0.002597    0.000367    0.007311      0.2819    CLKBUFX20
+AO1/clk__Fence_N1__L1_I0         6.25e+07        6.25e+07   0.004525     0.00259   0.0001864    0.007302      0.2815    BUFX16
+AO2/clk__Fence_N0__L1_I3         6.25e+07        6.25e+07   0.004347    0.002581    0.000367    0.007294      0.2812    CLKBUFX20
+AO1/clk__Fence_N1__L1_I2         6.25e+07        6.25e+07   0.004525    0.002582   0.0001864    0.007294      0.2812    BUFX16
+AO1/clk__Fence_N1__L1_I3         6.25e+07        6.25e+07   0.004525    0.002473   0.0001864    0.007185       0.277    BUFX16
+AO1/clk__Fence_N1__L1_I5         6.25e+07        6.25e+07   0.004525    0.002466   0.0001864    0.007177      0.2767    BUFX16
+external/clk__FENCE_MSV_Fence_I_N0__L1_I3
+                                 6.25e+07        6.25e+07   0.004524    0.002436   0.0001864    0.007147      0.2755    BUFX16
+AO1/clk__Fence_I1                6.25e+07        6.25e+07   0.004386    0.002382    0.000367    0.007135      0.2751    CLKBUFX20
+external/clk__FENCE_MSV_Fence_I_N0__L1_I2
+                                 6.25e+07        6.25e+07   0.004524    0.002406   0.0001864    0.007117      0.2744    BUFX16
+external/clk__FENCE_MSV_Fence_I_N0__L1_I5
+                                 6.25e+07        6.25e+07   0.004524    0.002403   0.0001864    0.007113      0.2742    BUFX16
+external/clk__FENCE_MSV_Fence_I_I0
+                                 6.25e+07        6.25e+07   0.004387    0.002357    0.000367     0.00711      0.2741    CLKBUFX20
+external/clk__FENCE_MSV_Fence_I_N0__L1_I0
+                                 6.25e+07        6.25e+07   0.004524    0.002341   0.0001864    0.007052      0.2719    BUFX16
+external/clk__FENCE_MSV_Fence_I_N0__L1_I1
+                                 6.25e+07        6.25e+07   0.004524    0.002243   0.0001864    0.006953       0.268    BUFX16
+AO2/clk__Fence_I0                6.25e+07        6.25e+07   0.004394    0.002122    0.000367    0.006883      0.2654    CLKBUFX20
+external/clk__FENCE_MSV_Fence_I_N0__L1_I4
+                                 6.25e+07        6.25e+07   0.004523    0.002119   0.0001864    0.006828      0.2632    BUFX16
+AO1/clk__Fence_N1__L1_I1         6.25e+07        6.25e+07   0.004523    0.002051   0.0001864    0.006761      0.2606    BUFX16
+AO1/clk__Fence_N1__L1_I4         6.25e+07        6.25e+07   0.004523     0.00204   0.0001864     0.00675      0.2602    BUFX16
+clk__L1_I0                       6.25e+07        6.25e+07   0.004532     0.00152   0.0001864    0.006239      0.2405    BUFX16
+column/clk__FENCE_MSV_Fence_I_I0
+                                 6.25e+07        6.25e+07    0.00436    0.001094    0.000367    0.005821      0.2244    CLKBUFX20
+ring/clk__FENCE_MSV_Fence_I_N0__L2_I0
+                                 6.25e+07        6.25e+07   0.001737    0.003717   0.0001474    0.005601      0.2159    BUFX8
+ring/clk__FENCE_MSV_Fence_I_N0__L2_I1
+                                 6.25e+07        6.25e+07   0.001737    0.003715   0.0001474    0.005599      0.2159    BUFX8
+ring/clk__FENCE_MSV_Fence_I_I0
+                                 6.25e+07        6.25e+07   0.004383   0.0007949    0.000367    0.005545      0.2138    CLKBUFX20
+ring/clk__FENCE_MSV_Fence_I_N0__L2_I2
+                                 6.25e+07        6.25e+07   0.001734    0.003228   0.0001474     0.00511       0.197    BUFX8
+ring/clk__FENCE_MSV_Fence_I_N0__L2_I3
+                                 6.25e+07        6.25e+07   0.001734    0.003209   0.0001474    0.005091      0.1963    BUFX8
+column/se__FENCE_MSV_Fence_I_N0__L1_I0
+                                 3.75e+07        3.75e+07  0.0004112    0.004574   6.202e-05    0.005047      0.1946    CLKBUFX3
+column/se__FENCE_MSV_Fence_I_N0__L1_I1
+                                 3.75e+07        3.75e+07  0.0004112    0.004497   6.202e-05     0.00497      0.1916    CLKBUFX3
+AO1/se__Fence_N1__L1_I3          3.75e+07        3.75e+07  0.0004112     0.00442   6.202e-05    0.004893      0.1886    CLKBUFX3
+column/se__FENCE_MSV_Fence_I_N0__L1_I3
+                                 3.75e+07        3.75e+07  0.0004112    0.004391   6.202e-05    0.004865      0.1875    CLKBUFX3
+external/se__FENCE_MSV_Fence_I_N0__L1_I1
+                                 3.75e+07        3.75e+07  0.0004104    0.004366   6.202e-05    0.004838      0.1865    CLKBUFX3
+AO1/se__Fence_N1__L1_I1          3.75e+07        3.75e+07  0.0004112    0.004359   6.202e-05    0.004832      0.1863    CLKBUFX3
+ring/se__FENCE_MSV_Fence_I_N0__L1_I0
+                                 3.75e+07        3.75e+07  0.0004104    0.004358   6.202e-05    0.004831      0.1862    CLKBUFX3
+AO2/se__Fence_N0__L1_I0          3.75e+07        3.75e+07  0.0004102     0.00434   6.202e-05    0.004812      0.1855    CLKBUFX3
+AO2/se__Fence_N0__L1_I1          3.75e+07        3.75e+07  0.0004102    0.004339   6.202e-05    0.004811      0.1855    CLKBUFX3
+ring/se__FENCE_MSV_Fence_I_N0__L1_I3
+                                 3.75e+07        3.75e+07  0.0004104    0.004324   6.202e-05    0.004796      0.1849    CLKBUFX3
+ring/se__FENCE_MSV_Fence_I_N0__L1_I2
+                                 3.75e+07        3.75e+07  0.0004104     0.00432   6.202e-05    0.004792      0.1848    CLKBUFX3
+AO1/se__Fence_N1__L1_I2          3.75e+07        3.75e+07  0.0004112      0.0043   6.202e-05    0.004773       0.184    CLKBUFX3
+AO2/se__Fence_N0__L1_I2          3.75e+07        3.75e+07  0.0004102    0.004298   6.202e-05     0.00477      0.1839    CLKBUFX3
+AO2/se__Fence_N0__L1_I3          3.75e+07        3.75e+07  0.0004102    0.004288   6.202e-05     0.00476      0.1835    CLKBUFX3
+external/se__FENCE_MSV_Fence_I_N0__L1_I2
+                                 3.75e+07        3.75e+07  0.0004104    0.004286   6.202e-05    0.004758      0.1834    CLKBUFX3
+external/se__FENCE_MSV_Fence_I_N0__L1_I3
+                                 3.75e+07        3.75e+07  0.0004104    0.004283   6.202e-05    0.004756      0.1833    CLKBUFX3
+ring/se__FENCE_MSV_Fence_I_N0__L1_I1
+                                 3.75e+07        3.75e+07  0.0004104    0.004281   6.202e-05    0.004754      0.1833    CLKBUFX3
+external/se__FENCE_MSV_Fence_I_N0__L1_I0
+                                 3.75e+07        3.75e+07  0.0004104    0.004202   6.202e-05    0.004674      0.1802    CLKBUFX3
+AO1/se__Fence_N1__L1_I0          3.75e+07        3.75e+07  0.0004112    0.004167   6.202e-05     0.00464      0.1789    CLKBUFX3
+AO2/rst__Fence_N0__L1_I0        3.125e+07       3.125e+07  0.0003412    0.003988   6.202e-05    0.004392      0.1693    CLKBUFX3
+column/se__FENCE_MSV_Fence_I_N0__L1_I2
+                                 3.75e+07        3.75e+07  0.0004113    0.003913   6.202e-05    0.004386      0.1691    CLKBUFX3
+external/rst__FENCE_MSV_Fence_I_N0__L1_I0
+                                3.125e+07       3.125e+07  0.0003419    0.003933   6.202e-05    0.004337      0.1672    CLKBUFX3
+AO2/rst__Fence_N0__L1_I1        3.125e+07       3.125e+07  0.0003412    0.003933   6.202e-05    0.004336      0.1672    CLKBUFX3
+AO1/rst__Fence_N1__L1_I1        3.125e+07       3.125e+07  0.0003415    0.003905   6.202e-05    0.004309      0.1661    CLKBUFX3
+ring/rst__FENCE_MSV_Fence_I_N0__L1_I1
+                                3.125e+07       3.125e+07  0.0003421    0.003903   6.202e-05    0.004307      0.1661    CLKBUFX3
+ring/rst__FENCE_MSV_Fence_I_N0__L1_I0
+                                3.125e+07       3.125e+07  0.0003421    0.003903   6.202e-05    0.004307       0.166    CLKBUFX3
+AO1/rst__Fence_N1__L1_I0        3.125e+07       3.125e+07  0.0003415    0.003896   6.202e-05    0.004299      0.1657    CLKBUFX3
+column/rst__FENCE_MSV_Fence_I_N0__L1_I0
+                                3.125e+07       3.125e+07  0.0003426    0.003893   6.202e-05    0.004298      0.1657    CLKBUFX3
+external/rst__FENCE_MSV_Fence_I_N0__L1_I1
+                                3.125e+07       3.125e+07  0.0003419    0.003884   6.202e-05    0.004288      0.1653    CLKBUFX3
+column/rst__FENCE_MSV_Fence_I_N0__L1_I1
+                                3.125e+07       3.125e+07  0.0003425     0.00388   6.202e-05    0.004284      0.1652    CLKBUFX3
+AO2/rst__Fence_N0__L1_I2        3.125e+07       3.125e+07  0.0003412    0.003869   6.202e-05    0.004272      0.1647    CLKBUFX3
+column/rst__FENCE_MSV_Fence_I_N0__L1_I2
+                                3.125e+07       3.125e+07  0.0003425    0.003842   6.202e-05    0.004246      0.1637    CLKBUFX3
+ring/rst__FENCE_MSV_Fence_I_N0__L1_I2
+                                3.125e+07       3.125e+07  0.0003421     0.00382   6.202e-05    0.004224      0.1628    CLKBUFX3
+AO1/rst__Fence_N1__L1_I2        3.125e+07       3.125e+07  0.0003415    0.003797   6.202e-05      0.0042      0.1619    CLKBUFX3
+external/rst__FENCE_MSV_Fence_I_N0__L1_I2
+                                3.125e+07       3.125e+07  0.0003418    0.003763   6.202e-05    0.004166      0.1606    CLKBUFX3
+clk__L2_I0                       6.25e+07        6.25e+07   0.001323     0.00217   0.0001212    0.003615      0.1394    BUFX6
+column/clk__FENCE_MSV_Fence_I_N0__L1_I0
+                                 6.25e+07        6.25e+07   0.001321    0.001845   0.0001212    0.003287      0.1267    CLKBUFX6
+ring/clk__FENCE_MSV_Fence_I_N0__L1_I0
+                                 6.25e+07        6.25e+07   0.001317    0.001318   0.0001212    0.002757      0.1063    BUFX6
+column/RC_CG_HIER_INST4/RC_CGIC_INST
+                                 6.25e+07        1.25e+07   0.001816   0.0005618   0.0001901    0.002568       0.099    TLATNTSCAX12
+ISO_RULE_ISO_HIER_INST_1/g1
+                                6.641e+07        4.77e+07   0.001404   0.0009846   0.0001373    0.002526      0.0974    AND2X8
+ring/RC_CG_HIER_INST8/RC_CGIC_INST
+                                 6.25e+07        1.25e+07    0.00182   0.0005071   0.0001901    0.002517     0.09703    TLATNTSCAX12
+RC_CG_DECLONE_HIER_INST80/RC_CGIC_INST
+                                 6.25e+07        1.25e+07   0.001797   0.0004238   0.0001901    0.002411     0.09294    TLATNTSCAX12
+ISO_RULE_ISO_HIER_INST_0/g1
+                                6.641e+07        4.77e+07   0.001414   0.0008584   0.0001373     0.00241     0.09291    AND2X8
+FE_OFC1_bypass                   3.75e+07        3.75e+07  0.0002693     0.00209   4.129e-05      0.0024     0.09253    CLKBUFX2
+ISO_RULE_ISO_HIER_INST_2/g1
+                                6.641e+07        4.77e+07   0.001411   0.0008282   0.0001373    0.002377     0.09162    AND2X8
+ISO_RULE_ISO_HIER_INST_3/g1
+                                6.641e+07        4.77e+07   0.001413   0.0008175   0.0001373    0.002368      0.0913    AND2X8
+column/RC_CG_HIER_INST5/RC_CGIC_INST
+                                 6.25e+07        1.25e+07   0.001831   0.0002682   0.0001901     0.00229     0.08828    TLATNTSCAX12
+ring/RC_CG_HIER_INST9/RC_CGIC_INST
+                                 6.25e+07        1.25e+07    0.00183   0.0002504   0.0001901    0.002271     0.08755    TLATNTSCAX12
+FE_OFC0_bypass                   3.75e+07        3.75e+07  0.0002699    0.001952   4.129e-05    0.002263     0.08725    CLKBUFX2
+ISO_RULE_ISO_HIER_INST_11/g1
+                                4.844e+07       4.297e+07   0.001238   0.0007324   0.0001373    0.002108     0.08127    AND2X8
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_225_30
+                                 3.75e+07        3.75e+07   0.001974   6.215e-05   3.403e-06     0.00204     0.07864    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_161_228_77
+                                 3.75e+07        3.75e+07   0.001972   6.085e-05   3.403e-06    0.002037     0.07852    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_142_108
+                                 3.75e+07        3.75e+07   0.001971   5.989e-05   3.403e-06    0.002034     0.07843    RING_SWITCH
+ISO_RULE_ISO_HIER_INST_13/g1
+                                4.844e+07       4.297e+07   0.001241   0.0006531   0.0001373    0.002031     0.07832    AND2X8
+ISO_RULE_ISO_HIER_INST_12/g1
+                                4.844e+07       4.297e+07   0.001252   0.0006255   0.0001373    0.002015     0.07768    AND2X8
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_32_228_32
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_225_79
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_145_2
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_35_228_33
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_158_133_111
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_101_228_56
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_72_228_46
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_121_228_63
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_199_21
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_109_228_59
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_213_26
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_211_25
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_208_24
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_205_23
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_202_22
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_179_14
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_196_20
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_176_13
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_193_19
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_190_18
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_188_17
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_185_16
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_182_15
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_52_228_39
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_40_133_152
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_106_228_58
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_103_228_57
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_81_228_49
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_78_228_48
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_75_228_47
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_106_133_129
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_185_93
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_216_27
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_49_228_38
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_46_228_37
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_43_228_36
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_40_228_35
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_37_228_34
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_222_29
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_219_28
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_63_133_144
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_86_133_136
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_83_133_137
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_81_133_138
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_78_133_139
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_75_133_140
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_72_133_141
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_69_133_142
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_170_98
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_66_133_143
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_89_133_135
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_60_133_145
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_58_133_146
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_55_133_147
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_52_133_148
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_35_133_154
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_37_133_153
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_49_133_149
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_46_133_150
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_43_133_151
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_182_94
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_170_11
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_167_10
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_165_9
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_162_8
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_159_7
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_156_6
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_153_5
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_150_4
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_147_3
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_173_12
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_179_95
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_103_133_130
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_176_96
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_101_133_131
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_98_133_132
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_173_97
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_95_133_133
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_92_133_134
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_149_133_114
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_147_133_115
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_144_228_71
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_150_105
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_121_133_124
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_124_133_123
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_147_106
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_145_107
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_126_133_122
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_208_85
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_205_86
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_144_133_116
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_152_133_113
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_155_133_112
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_129_133_121
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_202_87
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_199_88
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_132_133_120
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_141_133_117
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_138_133_118
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_135_133_119
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_153_104
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_109_133_128
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_124_228_64
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_126_228_65
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_129_228_66
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_211_84
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_213_83
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_112_133_127
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_156_103
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_118_133_125
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_132_228_67
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_135_228_68
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_115_133_126
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_138_228_69
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_141_228_70
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_155_228_75
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_152_228_74
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_149_228_73
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_147_228_72
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_159_102
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_216_82
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_188_92
+                                 3.75e+07        3.75e+07   0.001948   4.277e-05   3.403e-06    0.001994     0.07688    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_161_133_110
+                                 3.75e+07        3.75e+07   0.001948   4.254e-05   3.403e-06    0.001994     0.07686    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_158_228_76
+                                 3.75e+07        3.75e+07   0.001948   4.254e-05   3.403e-06    0.001994     0.07686    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_115_228_61
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_58_228_41
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_60_228_42
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_63_228_43
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_66_228_44
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_69_228_45
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_86_228_51
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_89_228_52
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_92_228_53
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_95_228_54
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_98_228_55
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_118_228_62
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_83_228_50
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_112_228_60
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_55_228_40
+                                 3.75e+07        3.75e+07   0.001948   4.252e-05   3.403e-06    0.001994     0.07685    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_23_142_1
+                                 3.75e+07        3.75e+07   0.001947   4.277e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_162_101
+                                 3.75e+07        3.75e+07   0.001947   4.237e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_190_91
+                                 3.75e+07        3.75e+07   0.001947   4.236e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_219_81
+                                 3.75e+07        3.75e+07   0.001947   4.235e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_165_100
+                                 3.75e+07        3.75e+07   0.001947   4.234e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_193_90
+                                 3.75e+07        3.75e+07   0.001947   4.233e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_222_80
+                                 3.75e+07        3.75e+07   0.001947   4.232e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_167_99
+                                 3.75e+07        3.75e+07   0.001947   4.231e-05   3.403e-06    0.001993     0.07684    RING_SWITCH
+ring/PSO_RING_psoI_PD_ring_1_RING_SWITCH_164_196_89
+                                 3.75e+07        3.75e+07   0.001947   4.224e-05   3.403e-06    0.001993     0.07683    RING_SWITCH
+ISO_RULE_ISO_HIER_INST_17/g1
+                                4.844e+07       4.297e+07   0.001241   0.0006133   0.0001373    0.001992     0.07679    AND2X8
+column/SUM_reg_3_15             7.422e+07        1.25e+07   0.001737   0.0001019   0.0001526    0.001991     0.07678    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_9/g1
+                                4.844e+07       4.297e+07   0.001244   0.0005924   0.0001373    0.001974      0.0761    AND2X8
+ISO_RULE_ISO_HIER_INST_16/g1
+                                4.844e+07       4.297e+07   0.001244   0.0005829   0.0001373    0.001964     0.07573    AND2X8
+ISO_RULE_ISO_HIER_INST_14/g1
+                                4.844e+07       4.297e+07   0.001247   0.0005734   0.0001373    0.001957     0.07546    AND2X8
+column/SUM_reg_3_9              7.407e+07        1.25e+07   0.001738   6.698e-05   0.0001526    0.001957     0.07546    SDFFRHQX1
+column/SUM_reg_3_10             7.415e+07        1.25e+07   0.001739   6.547e-05   0.0001526    0.001957     0.07544    SDFFRHQX1
+column/SUM_reg_3_11             7.418e+07        1.25e+07   0.001739   6.444e-05   0.0001526    0.001956     0.07542    SDFFRHQX1
+column/SUM_reg_3_8              7.393e+07        1.25e+07   0.001735    6.21e-05   0.0001526     0.00195     0.07518    SDFFRHQX1
+column/SUM_reg_3_12              7.42e+07        1.25e+07   0.001739   5.763e-05   0.0001526    0.001949     0.07515    SDFFRHQX1
+column/SUM_reg_3_6              7.306e+07        1.25e+07   0.001728   6.737e-05   0.0001526    0.001948     0.07511    SDFFRHQX1
+isolate_I0                       3.75e+07        3.75e+07   0.001696           0   0.0002515    0.001948      0.0751    CLKINVX20
+column/SUM_reg_3_7              7.364e+07        1.25e+07   0.001733   6.169e-05   0.0001526    0.001947     0.07507    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_15/g1
+                                4.844e+07       4.297e+07   0.001248   0.0005614   0.0001373    0.001947     0.07505    AND2X8
+column/SUM_reg_3_13             7.421e+07        1.25e+07   0.001739   5.345e-05   0.0001526    0.001945     0.07498    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_19/g1
+                                4.844e+07       4.297e+07   0.001245   0.0005606   0.0001373    0.001943      0.0749    AND2X8
+column/SUM_reg_3_14             7.421e+07        1.25e+07   0.001739   5.135e-05   0.0001526    0.001943     0.07489    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_18/g1
+                                4.844e+07       4.297e+07   0.001246   0.0005549   0.0001373    0.001938      0.0747    AND2X8
+column/SUM_reg_3_5               7.19e+07        1.25e+07   0.001719   6.559e-05   0.0001526    0.001937     0.07469    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_4/g1
+                                4.844e+07       4.297e+07    0.00125   0.0005462   0.0001373    0.001934     0.07456    AND2X8
+ISO_RULE_ISO_HIER_INST_5/g1
+                                4.844e+07       4.297e+07   0.001246   0.0005506   0.0001373    0.001934     0.07455    AND2X8
+ISO_RULE_ISO_HIER_INST_6/g1
+                                4.844e+07       4.297e+07   0.001246   0.0005469   0.0001373     0.00193     0.07442    AND2X8
+AO2/SUM_reg_3_15                6.714e+07        1.25e+07   0.001676   9.774e-05   0.0001526    0.001927     0.07427    SDFFRHQX1
+column/SUM_reg_3_4              6.958e+07        1.25e+07     0.0017   7.131e-05   0.0001526    0.001924     0.07418    SDFFRHQX1
+u0                                2.5e+08        1.25e+08          0    0.001923           0    0.001923     0.07414    pll
+ring/SUM_reg_3_13                7.03e+07        1.25e+07   0.001703   6.712e-05   0.0001526    0.001923     0.07413    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_8/g1
+                                4.844e+07       4.297e+07   0.001247   0.0005382   0.0001373    0.001922     0.07411    AND2X8
+ring/SUM_reg_3_11               7.028e+07        1.25e+07   0.001703   6.409e-05   0.0001526     0.00192     0.07401    SDFFRHQX1
+ring/SUM_reg_3_12                7.03e+07        1.25e+07   0.001703   6.349e-05   0.0001526    0.001919     0.07399    SDFFRHQX1
+ISO_RULE_ISO_HIER_INST_7/g1
+                                4.844e+07       4.297e+07   0.001247   0.0005337   0.0001373    0.001918     0.07395    AND2X8
+ring/SUM_reg_3_14               7.031e+07        1.25e+07   0.001703   6.053e-05   0.0001526    0.001916     0.07386    SDFFRHQX1
+ring/SUM_reg_3_10               7.024e+07        1.25e+07   0.001702   6.004e-05   0.0001526    0.001915     0.07383    SDFFRHQX1
+ring/SUM_reg_3_15               7.031e+07        1.25e+07   0.001701   5.906e-05   0.0001526    0.001913     0.07373    SDFFRHQX1
+ring/SUM_reg_3_7                6.976e+07        1.25e+07   0.001699   5.958e-05   0.0001526    0.001911     0.07368    SDFFRHQX1
+ring/SUM_reg_3_9                7.018e+07        1.25e+07   0.001702   5.566e-05   0.0001526     0.00191     0.07364    SDFFRHQX1
+ring/SUM_reg_3_8                7.004e+07        1.25e+07   0.001701   5.577e-05   0.0001526    0.001909     0.07361    SDFFRHQX1
+ring/SUM_reg_3_6                6.921e+07        1.25e+07   0.001695   5.543e-05   0.0001526    0.001903     0.07335    SDFFRHQX1
+ring/SUM_reg_3_5                6.812e+07        1.25e+
