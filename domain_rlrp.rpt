@@ -1,0 +1,86 @@
+######################################################################
+#i
+# File Info    : Domain Based RLRP Report
+# Date Created : Mon Jun  9 05:29:06 2025
+# User login   : ishaans
+# Created on   : sjfhw758
+######################################################################
+
+
+# Layer Representation: LEF
+#      Coordinate Unit: um
+#      Resistance Unit: Ohm
+
+
+
+NET: VDD_LV_COR VSS_LV_COR
+
+# Threshold:    0.000
+
+# Total Resistance of the Least Resistive Path for instances sorted from high to low
+
+# PASS/FAIL	    RLRP  INSTANCE CELL_NAME  	PIN...  
+    -        	     D/C padring/InstPad_AURORA_SPCR_ASRC_TIE_LV_thisisatestpart2 spcr_asrc_tie_LV	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_ADC1_3_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_ADC0_2_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_ADC1_3_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_ADC0_2_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  ENDCAP_top_176 precap	VDD_LV_COR	    vdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	    gnd	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_49 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE_TEST3 pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE_TEST2 pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_AURORA_VSS_LV_IO_AURORA_196 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_AURORA_VSS_LV_IO_AURORA_188 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  sptb/afe_radar_wrapper/afe a_ip_afe_radar_c55fg	VDD_LV_COR	 vddd_core	 VDD_LV_CORvsrc133(  5.0701,  0.00%)   VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	 vssd_core	 VSS_LV_CORvsrc148(   15.24,  0.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_5 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_41 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_35 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_22 pad_vsse_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_VSS_LV_IO_MTI_16 pad_vsse_lvHELLOOOOOO	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_MTI_SPCR_ASRC_TIE_HV spcr_asrc_tie_lv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO3_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO3_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE_TEST4 pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE8 pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO2_SPCR_REFBG_292 spcr_refbg_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE_TEST5 pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_PMC_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_PMC_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_WGM_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_WGM_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO1_TGATE_VREFX pad_tgate_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_FLASH_CORE_V_DET_HV core_pmc_det_int_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_PDI_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO2_SPCR_ASRC_TIE_HV spcr_asrc_tie_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_PDI_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  padring/InstPad_GPIO2_CORE_V_DET_HV core_pmc_det_hv	VDD_LV_COR	   dvdd	     NA(2.1475e+09, 50.00%)   VSS_LV_COR	   dvss	     NA(2.1475e+09, 50.00%)   
+  -        	     D/C  ENDCAP_top_164 precap	VDD_LV_COR	    vdd	     NA(2.1475e+09, 100.00%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc439(  17.346,  0.00%)   
+  -        	    625.43  comp_z7a/comp_peri_sh/lbist_comp_peri_sh/flash0/flash0 c55fmc_4096_14_000_602_022	VSS_LV_COR	   vssf	 VSS_LV_CORvsrc140(  625.43, 100.00%)   
+  -        	     164.2  safety_lake/chk_z4z7b/lbist_chk_z4z7b/I_ca_rr_bist_core2dtcm_ram_collar_19/rr_core2dtcm_ram_1 c55nvm_sp_w8192b040b4c8_ncnnwssbns	VDD_LV_COR	   vddp	 VDD_LV_CORvsrc627(  130.85, 79.69%)   VDD_LV_COR	   vdda	 VDD_LV_CORvsrc622(  6.3026,  3.84%)   VSS_LV_COR	    vss	 VSS_LV_CORvsrc470(  27.049, 16.47%)   
+  -        	    77.576  DECAP_impl4_2232388 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  70.424, 90.78%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(   7.152,  9.22%)   
+  -        	    77.576  DECAP_impl4_2232389 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  70.877, 91.37%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.6985,  8.63%)   
+  -        	    77.573  DECAP_impl4_2232390 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  70.662, 91.09%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.9111,  8.91%)   
+  -        	    77.563  DECAP_impl4_2232387 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(   69.97, 90.21%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.5926,  9.79%)   
+  -        	    77.368  DECAP_impl4_2232391 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  70.208, 90.75%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.1595,  9.25%)   
+  -        	    77.331  DECAP_impl4_2232398 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  69.562, 89.95%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.7691, 10.05%)   
+  -        	    77.128  DECAP_impl4_2232386 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  69.517, 90.13%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.6107,  9.87%)   
+  -        	    77.063  DECAP_impl4_2232399 HS55_LH_DECAP6	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(   69.46, 90.13%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.6028,  9.87%)   
+  -        	    77.014  DECAP_impl4_2234635 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  70.877, 92.03%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.1363,  7.97%)   
+  -        	    77.008  DECAP_impl4_2232381 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  69.863, 90.72%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.1456,  9.28%)   
+  -        	    76.938  DECAP_impl4_2234636 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  70.662, 91.84%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.2767,  8.16%)   
+  -        	    76.897  DECAP_impl4_2232383 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  68.956, 89.67%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.9412, 10.33%)   
+  -        	    76.897  DECAP_impl4_2232382 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  69.409, 90.26%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.4877,  9.74%)   
+  -        	    76.652  DECAP_impl4_2234634 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  70.424, 91.88%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(   6.228,  8.12%)   
+  -        	    76.554  DECAP_impl4_2232380 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  69.862, 91.26%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.6921,  8.74%)   
+  -        	    76.516  DECAP_impl4_2232397 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  69.108, 90.32%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.4079,  9.68%)   
+  -        	    76.484  DECAP_impl4_2232385 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(  69.063, 90.30%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.4204,  9.70%)   
+  -        	     76.48  DECAP_impl4_2232392 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  69.755, 91.21%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.7256,  8.79%)   
+  -        	     76.44  WELLTAP_TOP_70700 HS55_LH_FILLERNPW5	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  69.149, 90.46%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(   7.291,  9.54%)   
+  -        	    76.389  DECAP_impl4_2232396 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  68.655, 89.88%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.7339, 10.12%)   
+  -        	    76.377  DECAP_impl4_2232400 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(   68.78, 90.05%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  7.5971,  9.95%)   
+  -        	    76.372  DECAP_impl4_2232408 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  68.218, 89.32%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  8.1534, 10.68%)   
+  -        	    76.356  DECAP_impl4_2232401 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  68.327, 89.48%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  8.0298, 10.52%)   
+  -        	     76.32  DECAP_impl4_2232402 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc249(  67.873, 88.93%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  8.4465, 11.07%)   
+  -        	    76.309  DECAP_impl4_2234633 HS55_LH_DECAP8	VDD_LV_COR	    vdd	 VDD_LV_CORvsrc159(   69.97, 91.69%)   VSS_LV_COR	    gnd	 VSS_LV_CORvsrc140(  6.3383,  8.31%)   
