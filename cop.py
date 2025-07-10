@@ -52,7 +52,7 @@ def detect_instance_column(mmapped_file):
     return col_counter.most_common(1)[0][0]
 
 def parse_file_with_mmap(file_path, value_column_index):
-    instances = {}
+    instances = []
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         start_offset = find_start_offset(mmapped_file)
@@ -65,14 +65,23 @@ def parse_file_with_mmap(file_path, value_column_index):
             if not is_valid_instance_line(line):
                 continue
             parts = line.strip().split()
-            if len(parts) <= max(inst_col, value_column_index):
+
+            # ✅ Only check if instance column exists, ignore value column
+            if len(parts) <= inst_col:
                 continue
+
             instance = parts[inst_col].decode(errors='ignore')
-            value = parts[value_column_index].decode(errors='ignore') if len(parts) > value_column_index else None
-            instances[instance] = value
+            instances.append(instance)
 
         mmapped_file.close()
     return instances
+
+def compare_instances(instances1, instances2):
+    set1 = set(instances1)
+    set2 = set(instances2)
+    missing_in_file2 = [i for i in instances1 if i not in set2]
+    missing_in_file1 = [i for i in instances2 if i not in set1]
+    return missing_in_file2, missing_in_file1
 
 def count_lines(path):
     with open(path, 'rb') as f:
@@ -132,39 +141,33 @@ def main():
     lines1 = count_lines(args.file1)
     lines2 = count_lines(args.file2)
 
-    data1 = parse_file_with_mmap(args.file1, args.col1)
-    data2 = parse_file_with_mmap(args.file2, args.col2)
+    list1 = parse_file_with_mmap(args.file1, args.col1)
+    list2 = parse_file_with_mmap(args.file2, args.col2)
 
-    # Missing instances based only on instance presence
-    missing_instances = [inst for inst in data1 if inst not in data2]
+    miss2, miss1 = compare_instances(list1, list2)
 
-    # Instances with missing or invalid data
-    missing_data = []
-    for inst in data1:
-        if inst in data2:
-            val = data2.get(inst)
-            if val in [None, "", "NA"]:
-                missing_data.append(inst)
-
-    with open("missing_instances.txt", "w") as out:
-        out.write(f"{'='*60}\nInstances missing from {file2_name}:\n{'='*60}\n")
-        for inst in missing_instances:
+    out_path = "missing_instances.txt"
+    with open(out_path, "w") as out:
+        out.write(f"{'='*60}\n")
+        out.write(f"Instances missing from {file2_name}:\n")
+        out.write(f"{'='*60}\n")
+        for inst in miss2:
+            out.write(f"{inst}\n")
+        out.write(f"\n{'='*60}\n")
+        out.write(f"Instances missing from {file1_name}:\n")
+        out.write(f"{'='*60}\n")
+        for inst in miss1:
             out.write(f"{inst}\n")
 
-    with open("instances_missing_data.txt", "w") as out:
-        out.write(f"{'='*60}\nInstances with missing data in {file2_name}:\n{'='*60}\n")
-        for inst in missing_data:
-            out.write(f"{inst}\n")
-
+    missing_count = len(miss1) + len(miss2)
     t1 = time.time()
     mem_after = proc.memory_info().rss
 
-    print("\nSummary")
+    print("Summary of Missing Instances")
     print("=" * 35)
-    print(f"→ {len(missing_instances)} instance(s) missing from {file2_name}")
-    print(f"→ {len(missing_data)} instance(s) with missing data in '{file2_name}'")
+    print(f"→ {missing_count} missing instance(s) saved in '{out_path}'")
 
-    print("\nStatistics")
+    print("Statistics")
     print("=" * 35)
     print(f"  • Lines in {file1_name}: {lines1}")
     print(f"  • Lines in {file2_name}: {lines2}")
