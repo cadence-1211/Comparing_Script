@@ -5,7 +5,6 @@ import psutil
 import sys
 import mmap
 import re
-from collections import Counter
 
 # Metadata keywords to skip
 METADATA_KEYWORDS = {
@@ -35,42 +34,20 @@ def find_start_offset(mmapped_file):
                 return pos
     return 0
 
-def detect_instance_column(mmapped_file):
-    mmapped_file.seek(0)
-    col_counter = Counter()
-    for _ in range(5000):
-        line = mmapped_file.readline()
-        if is_valid_instance_line(line):
-            parts = line.strip().split()
-            for i, word in enumerate(parts):
-                if re.match(rb"^[A-Za-z0-9_/]+$", word):
-                    col_counter[i] += 1
-            if len(col_counter) >= 25:
-                break
-    if not col_counter:
-        return 0
-    return col_counter.most_common(1)[0][0]
-
-def parse_file_with_mmap(file_path, value_column_index):
+def parse_file_with_mmap(file_path, instance_column_index):
     instances = []
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         start_offset = find_start_offset(mmapped_file)
         mmapped_file.seek(start_offset)
 
-        inst_col = detect_instance_column(mmapped_file)
-        mmapped_file.seek(start_offset)
-
         for line in iter(mmapped_file.readline, b""):
             if not is_valid_instance_line(line):
                 continue
             parts = line.strip().split()
-
-            # ✅ Only check if instance column exists, ignore value column
-            if len(parts) <= inst_col:
+            if len(parts) <= instance_column_index:
                 continue
-
-            instance = parts[inst_col].decode(errors='ignore')
+            instance = parts[instance_column_index].decode(errors='ignore')
             instances.append(instance)
 
         mmapped_file.close()
@@ -101,16 +78,16 @@ def get_column_name(file_path, col_index):
 def main():
     parser = argparse.ArgumentParser(description="Compare two files and report missing instances + stats")
     parser.add_argument("--file1", help="Path to first file")
-    parser.add_argument("--col1", type=int, help="0-based value column index in file1")
+    parser.add_argument("--col1", type=int, help="0-based INSTANCE column index in file1")
     parser.add_argument("--file2", help="Path to second file")
-    parser.add_argument("--col2", type=int, help="0-based value column index in file2")
+    parser.add_argument("--col2", type=int, help="0-based INSTANCE column index in file2")
     args = parser.parse_args()
 
     if not args.file1:
         args.file1 = input("Enter path to first file: ")
     if args.col1 is None:
         try:
-            args.col1 = int(input("Enter value column index for file1: "))
+            args.col1 = int(input("Enter instance column index for file1: "))
         except ValueError:
             print("Invalid column number for file1.")
             sys.exit(1)
@@ -118,7 +95,7 @@ def main():
         args.file2 = input("Enter path to second file: ")
     if args.col2 is None:
         try:
-            args.col2 = int(input("Enter value column index for file2: "))
+            args.col2 = int(input("Enter instance column index for file2: "))
         except ValueError:
             print("Invalid column number for file2.")
             sys.exit(1)
@@ -129,10 +106,10 @@ def main():
     col_name1 = get_column_name(args.file1, args.col1)
     col_name2 = get_column_name(args.file2, args.col2)
 
-    print("Comparing Columns")
+    print("Comparing Instance Columns")
     print("=" * 35)
-    print(f"  • From {file1_name}: {col_name1} (Value Column {args.col1 + 1})")
-    print(f"  • From {file2_name}: {col_name2} (Value Column {args.col2 + 1})")
+    print(f"  • From {file1_name}: {col_name1} (Column {args.col1 + 1})")
+    print(f"  • From {file2_name}: {col_name2} (Column {args.col2 + 1})")
 
     proc = psutil.Process(os.getpid())
     mem_before = proc.memory_info().rss
