@@ -17,11 +17,6 @@ METADATA_KEYWORDS = {
 
 META_RE = re.compile(rb"^(%s)" % b"|".join(k.encode() for k in METADATA_KEYWORDS))
 
-# Regex for extracting instance name (pattern-based)
-INSTANCE_RE = re.compile(rb"^\s*([A-Za-z0-9_/]+)")
-
-NUMERIC_RE = re.compile(rb"^-?\d*\.?\d+(?:[eE][-+]?\d+)?$")
-
 def is_valid_instance_line(line):
     line = line.strip()
     if not line or line.startswith(b"#") or META_RE.match(line):
@@ -40,30 +35,11 @@ def find_start_offset(mmapped_file):
                 return pos
     return 0
 
-def detect_instance_column(mmapped_file):
-    mmapped_file.seek(0)
-    col_counter = Counter()
-    for _ in range(5000):
-        line = mmapped_file.readline()
-        if is_valid_instance_line(line):
-            parts = line.strip().split()
-            for i, word in enumerate(parts):
-                if re.match(rb"^[A-Za-z0-9_/]+$", word):
-                    col_counter[i] += 1
-            if len(col_counter) >= 25:
-                break
-    if not col_counter:
-        return 0
-    return col_counter.most_common(1)[0][0]
-
-def parse_file_with_mmap(file_path, value_column_index):
-    instance_map = {}
+def parse_file_with_mmap(file_path, inst_col, value_column_index):
+    instances = []
     with open(file_path, "rb") as f:
         mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         start_offset = find_start_offset(mmapped_file)
-        mmapped_file.seek(start_offset)
-
-        inst_col = detect_instance_column(mmapped_file)
         mmapped_file.seek(start_offset)
 
         for line in iter(mmapped_file.readline, b""):
@@ -72,18 +48,17 @@ def parse_file_with_mmap(file_path, value_column_index):
             parts = line.strip().split()
             if len(parts) <= max(inst_col, value_column_index):
                 continue
-            value_part = parts[value_column_index].strip()
-            if not NUMERIC_RE.match(value_part):
-                continue  # Skip if value is missing or non-numeric
-            instance = parts[inst_col].decode(errors='ignore')
-            instance_map[instance] = value_part.decode(errors='ignore')
+            if not parts[value_column_index].strip():
+                continue  # Skip if value is empty
+            instance = parts[inst_col].decode('utf-8', errors='ignore')  # Preserve original case
+            instances.append(instance)
 
         mmapped_file.close()
-    return instance_map
+    return instances
 
 def compare_instances(instances1, instances2):
-    set1 = set(instances1.keys())
-    set2 = set(instances2.keys())
+    set1 = set(instances1)
+    set2 = set(instances2)
     missing_in_file2 = [i for i in instances1 if i not in set2]
     missing_in_file1 = [i for i in instances2 if i not in set1]
     return missing_in_file2, missing_in_file1
@@ -106,27 +81,26 @@ def get_column_name(file_path, col_index):
 def main():
     parser = argparse.ArgumentParser(description="Compare two files and report missing instances + stats")
     parser.add_argument("--file1", help="Path to first file")
+    parser.add_argument("--instcol1", type=int, help="0-based instance column index in file1")
     parser.add_argument("--col1", type=int, help="0-based value column index in file1")
     parser.add_argument("--file2", help="Path to second file")
+    parser.add_argument("--instcol2", type=int, help="0-based instance column index in file2")
     parser.add_argument("--col2", type=int, help="0-based value column index in file2")
     args = parser.parse_args()
 
     if not args.file1:
         args.file1 = input("Enter path to first file: ")
+    if args.instcol1 is None:
+        args.instcol1 = int(input("Enter instance column index for file1: "))
     if args.col1 is None:
-        try:
-            args.col1 = int(input("Enter value column index for file1: "))
-        except ValueError:
-            print("Invalid column number for file1.")
-            sys.exit(1)
+        args.col1 = int(input("Enter value column index for file1: "))
+
     if not args.file2:
         args.file2 = input("Enter path to second file: ")
+    if args.instcol2 is None:
+        args.instcol2 = int(input("Enter instance column index for file2: "))
     if args.col2 is None:
-        try:
-            args.col2 = int(input("Enter value column index for file2: "))
-        except ValueError:
-            print("Invalid column number for file2.")
-            sys.exit(1)
+        args.col2 = int(input("Enter value column index for file2: "))
 
     file1_name = os.path.basename(args.file1)
     file2_name = os.path.basename(args.file2)
@@ -146,10 +120,10 @@ def main():
     lines1 = count_lines(args.file1)
     lines2 = count_lines(args.file2)
 
-    map1 = parse_file_with_mmap(args.file1, args.col1)
-    map2 = parse_file_with_mmap(args.file2, args.col2)
+    list1 = parse_file_with_mmap(args.file1, args.instcol1, args.col1)
+    list2 = parse_file_with_mmap(args.file2, args.instcol2, args.col2)
 
-    miss2, miss1 = compare_instances(map1, map2)
+    miss2, miss1 = compare_instances(list1, list2)
 
     out_path = "missing_instances.txt"
     with open(out_path, "w") as out:
