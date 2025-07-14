@@ -27,21 +27,18 @@ def is_valid_instance_line(line):
     return True
 
 def extract_value(value_bytes):
-    value_str = value_bytes.decode('utf-8', errors='ignore')
-    # If brackets present, try to extract number
-    if any(c in value_str for c in "(){}[]"):
-        match = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", value_str)
-        if match:
-            try:
-                return float(match.group())
-            except:
-                return None
-    # If it's a valid float by itself
-    try:
-        return float(value_str)
-    except:
-        # Fallback to string
-        return value_str.strip()
+    value_str = value_bytes.decode('utf-8', errors='ignore').strip()
+
+    # Always try to extract a number, even from "1324.24," or "(1234.5)"
+    match = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", value_str)
+    if match:
+        try:
+            return float(match.group())
+        except ValueError:
+            pass
+
+    # If no number, treat as string
+    return value_str
 
 def parse_file_with_mmap(file_path, inst_col, value_col):
     data = {}
