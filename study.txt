@@ -1,0 +1,351 @@
+Of course. I will provide a detailed, line-by-line explanation of all three scripts.
+
+First, a very important point: As a language model, I can only generate text. I cannot create PDF or MP3 files directly.
+
+However, I will provide you with a well-structured text explanation that you can very easily use to create these files yourself:
+
+To create a PDF: Copy the complete text of my explanation below and paste it into a word processor like Microsoft Word, Google Docs, or LibreOffice. Then, simply use the "Save as PDF" or "Print to PDF" option.
+
+To create an MP3: You can use a free text-to-speech (TTS) website or software. Just copy the text of each section into the TTS tool, and it will generate the audio for you to download as an MP3 file.
+
+Detailed Code Explanation
+
+Here is the detailed breakdown of the three scripts in your workflow.
+
+Script 1: launch_comparison.py
+
+Overall Purpose: This is the master control script. Think of it as the "Project Manager." Its job is to talk to you (the user) to get all the necessary information, and then use that information to prepare the work (by splitting the files) and delegate it (by submitting the jobs to LSF). You only run this script once at the very beginning.
+
+Generated python
+# File: launch_comparison.py
+# Purpose: The main script to start the entire process.
+
+# --- Block 1: Importing Libraries ---
+# These are tools the script needs to perform its tasks.
+import os                   # Lets the script interact with the operating system, like checking for files and creating directories.
+import argparse             # A standard library to help create command-line interfaces (though we use it minimally here).
+import subprocess           # The most important tool for this script. It allows Python to run external commands, specifically 'bsub'.
+
+# --- Block 2: The 'get_instance_key' function ---
+# This small helper function reads one line of a file and extracts the instance key.
+def get_instance_key(line, key_cols):
+    """Extracts the key from a line for sharding."""
+    parts = line.strip().split()            # 1. Takes a line, removes any leading/trailing whitespace (`strip`), and splits it into a list of words (`split`).
+    if len(parts) <= max(key_cols):         # 2. Checks if the line has enough columns. If not, it can't get the key.
+        return None                         # 3. Returns 'None' (nothing) if the line is too short.
+    return "_".join(parts[i] for i in key_cols) # 4. If the line is valid, it picks the words from the columns you specified (`key_cols`) and joins them with an underscore to make a single key (e.g., "inst_ABC_01").
+
+# --- Block 3: The 'shard_file' function ---
+# This is the core logic for splitting one large file into many smaller ones.
+def shard_file(input_file, key_cols, num_shards, output_dir):
+    """Reads a large file and splits it into smaller shards based on a key."""
+    print(f"-> Processing {input_file}...")
+    if not os.path.exists(output_dir):      # 1. Checks if the 'shards' directory exists.
+        os.makedirs(output_dir)             # 2. If it doesn't exist, it creates it.
+        print(f"-> Created output directory: '{output_dir}'")
+        
+    # 3. This line prepares for writing. It opens a set of empty files to write to (e.g., shard_0.txt, shard_1.txt, etc.), one for each job.
+    output_files = [open(os.path.join(output_dir, f"{os.path.basename(input_file)}_shard_{i}.txt"), "w") for i in range(num_shards)]
+    
+    with open(input_file, "r", errors='ignore') as f: # 4. Opens the giant input file for reading.
+        line_count = 0
+        for line in f:                      # 5. Reads the giant file ONE line at a time. This is very memory-efficient.
+            line_count += 1
+            if line_count % 5000000 == 0:   # 6. A simple progress indicator that prints a message every 5 million lines.
+                print(f"   ...processed {line_count // 1000000}M lines of {os.path.basename(input_file)}")
+            if not line.strip() or line.strip().startswith("#"): # 7. Skips any empty lines or lines that are comments.
+                continue
+            key = get_instance_key(line, key_cols) # 8. Gets the instance key for the current line using the helper function from Block 2.
+            if key is None:
+                continue
+            
+            # 9. This is the "magic" of sharding. `hash(key)` turns the key string into a unique, large number. The modulo `%` operator gives the remainder when that number is divided by `num_shards`.
+            # This guarantees that the same key will ALWAYS result in the same shard_index.
+            shard_index = hash(key) % num_shards
+            
+            # 10. Writes the current line into the correct small file based on the calculated index.
+            output_files[shard_index].write(line)
+            
+    for file_handle in output_files:      # 11. After processing the whole file, this loop closes all the small output files.
+        file_handle.close()
+    print(f"-> Finished sharding {input_file}.")
+
+# --- Block 4: The 'main' function ---
+# This is the main body of the script that controls the overall workflow.
+def main():
+    """Guides the user, shards files, and submits LSF jobs."""
+    parser = argparse.ArgumentParser(description="Fully automated script to shard files and submit comparison jobs to LSF.")
+    args = parser.parse_args()
+
+    print("--- LSF Comparison Job Launcher ---")
+    print("This script will guide you through sharding your files and submitting the jobs.")
+
+    # --- Part 1 of main: Gathers all information from you interactively. ---
+    print("\n--- Part 1: Information Gathering ---")
+    file1 = input("Enter path to first file: ")
+    instcol1_str = input(f"Enter instance key column(s) for {os.path.basename(file1)} (e.g., 2): ")
+    valcol1 = input(f"Enter value column for {os.path.basename(file1)} (e.g., 1): ")
+    # ... (repeats this for the second file and other parameters) ...
+    shards = int(input("How many parallel jobs do you want to run? (e.g., 5, 10, 20): "))
+    python_command = input("Enter the full path to the Python command on LSF (press Enter for default): ")
+    if not python_command: # If you just press Enter, it uses a default path.
+        python_command = "/grid/common/pkgsData/python-v3.9.6t1/Linux/RHEL8.0-2019-x86_64/bin/python3.9"
+        print(f"   Using default: {python_command}")
+
+    # --- Part 2 of main: Calls the sharding function. ---
+    print("\n--- Part 2: Sharding Files ---")
+    output_dir = "shards"
+    instcol1 = list(map(int, instcol1_str.split(','))) # Converts your comma-separated string of columns (e.g., "0,1") into a list of numbers.
+    instcol2 = list(map(int, instcol2_str.split(',')))
+    
+    # Calls the function from Block 3 to split the first file.
+    shard_file(file1, instcol1, shards, output_dir)
+    # Calls the function again to split the second file.
+    shard_file(file2, instcol2, shards, output_dir)
+    print("✅ Sharding complete.")
+
+    # --- Part 3 of main: Automatically builds and submits the LSF jobs. ---
+    print("\n--- Part 3: Submitting Jobs to LSF ---")
+    os.makedirs("results", exist_ok=True) # Creates the 'results' and 'logs' directories if they don't already exist.
+    os.makedirs("logs", exist_ok=True)
+
+    file1_basename = os.path.basename(file1) # Gets just the filename from the full path.
+    file2_basename = os.path.basename(file2)
+    
+    for i in range(shards): # This loop runs once for each job you requested.
+        # This block builds the full 'bsub' command as one long string.
+        # It uses f-strings (the f"...") to automatically insert all the variables (filenames, columns, etc.) you provided earlier into the command string.
+        # This is what makes the process automatic and prevents you from having to edit a .sh file.
+        bsub_command = (
+            f"bsub -n 2 -R 'rusage[mem=16G]' -o 'logs/output_{i}.log' "
+            f"{python_command} compare_adv.py "
+            f"--file1 'shards/{file1_basename}_shard_{i}.txt' "
+            f"--file2 'shards/{file2_basename}_shard_{i}.txt' "
+            f"--instcol1 '{instcol1_str}' "
+            f"--valcol1 {valcol1} "
+            f"--instcol2 '{instcol2_str}' "
+            f"--valcol2 {valcol2} "
+            f"--output_prefix 'results/run_{i}'"
+        )
+        
+        try:
+            print(f"-> Submitting job for shard {i}...")
+            # This is the command that actually runs 'bsub'. It tells the operating system to execute the command string we just built.
+            subprocess.run(bsub_command, shell=True, check=True)
+        except subprocess.CalledProcessError as e: # If 'bsub' returns an error, this catches it.
+            print(f"  ERROR: Failed to submit job for shard {i}. LSF command failed.")
+            print(f"  Command was: {bsub_command}")
+            break # Stops submitting more jobs if one fails.
+
+    print("\n✅ All jobs submitted! Check status with 'bjobs'.")
+    print("Once all jobs are 'DONE', run 'python3 merge_results.py' to get the final output.")
+
+# --- Block 5: The Script Entry Point ---
+# This is a standard Python convention. The code inside this 'if' statement only runs when you execute the script directly (e.g., `python3 launch_comparison.py`).
+if __name__ == "__main__":
+    main() # Calls the main function to start the whole process.
+
+Script 2: compare_adv.py
+
+Overall Purpose: This is the "Worker Bee" script. You never run it yourself. The LSF cluster runs this script on different machines for each of your small, sharded files. Its only job is to take one pair of small files, compare them, and write a small, partial result file.
+
+Generated python
+# File: compare_adv.py
+# Purpose: The core comparison logic that runs on each LSF node.
+
+# --- Block 1: Importing Libraries ---
+import argparse, os, sys, mmap, csv, re, multiprocessing # Imports all necessary tools for file parsing and comparison. `mmap` is special, it lets Python read files very efficiently as if they were just a big string in memory.
+
+# --- Block 2: Global Constants ---
+# These are defined once at the top for efficiency and clarity.
+NUMERIC_RE = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?") # A "Regular Expression" that is pre-compiled to quickly find numbers inside strings (like "12.3" inside "abc(12.3u)").
+METADATA_KEYWORDS_SET = { ... } # A set of keywords to identify and skip header lines in your data files. Using a 'set' is faster than a 'list' for checking if a keyword exists.
+
+# --- Block 3: Helper Functions ---
+def is_valid_instance_line(line):
+    """Checks if a line is valid data, ignoring headers and comments."""
+    # ... (This function uses the METADATA_KEYWORDS_SET to skip non-data lines) ...
+    
+def extract_value(value_bytes, comparison_type='numeric'):
+    """Extracts a numeric or string value from a byte string."""
+    value_str = value_bytes.decode('utf-8', errors='ignore').strip() # Decodes the raw bytes from the file into a normal Python string.
+    # ... (Uses the NUMERIC_RE to find and convert numbers if possible) ...
+    
+# --- Block 4: The 'parse_file_with_mmap' function ---
+# This function reads one small shard file and converts it into a Python dictionary for easy lookup.
+def parse_file_with_mmap(file_path, inst_cols, value_col):
+    """Parses a file using memory-mapping for efficiency."""
+    data, instances_set = {}, set() # Creates an empty dictionary (`data`) to store the results {key: value} and a set (`instances_set`) to just store the keys.
+    try:
+        with open(file_path, "rb") as f: # Opens the shard file in "read binary" ('rb') mode.
+            mmapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) # Memory-maps the file for high performance.
+            for line in iter(mmapped_file.readline, b""): # Reads the file line by line.
+                if not is_valid_instance_line(line): continue # Skips header/comment lines.
+                parts = line.strip().split()
+                if len(parts) <= max(inst_cols + [value_col]): continue # Skips malformed lines.
+                try:
+                    key = tuple(parts[i].decode('utf-8', errors='ignore').strip() for i in inst_cols) # Extracts the key (same logic as sharder).
+                    val_parsed = extract_value(parts[value_col]) # Extracts the value using the helper function.
+                    data[key] = val_parsed # Stores the key-value pair in the dictionary.
+                    instances_set.add(key) # Stores just the key in the set.
+                except IndexError: continue
+            mmapped_file.close()
+    except FileNotFoundError: # If for some reason the shard file isn't found on the LSF machine.
+        print(f"FATAL ERROR on LSF node: Cannot find file {file_path}. Exiting.")
+        sys.exit(1) # This is crucial. It tells LSF the job FAILED.
+    return data, instances_set
+
+# --- Block 5: Comparison and Writing Functions ---
+def compare_instances(instances1, instances2):
+    """Compares instance sets to find matched and missing instances."""
+    # ... (Uses set logic to quickly find which instances are in both files, only in file1, or only in file2) ...
+
+def write_missing_file(file1_name, file2_name, miss2, miss1, out_filename):
+    """Writes missing instances to a file."""
+    # ... (This function takes the lists of missing instances and writes them to a text file) ...
+
+def write_comparison_csv(file1_name, file2_name, data1, data2, matched, out_filename):
+    """Writes the detailed comparison of matched instances to a CSV file."""
+    # ... (This function iterates through the matched instances, calculates the difference and percentage, and writes one row to the partial CSV file for each match) ...
+
+# --- Block 6: The 'parse_file_worker' function ---
+# This is a tiny wrapper function required for the `multiprocessing` library to work correctly.
+def parse_file_worker(args_tuple):
+    """Helper function for multiprocessing."""
+    return parse_file_with_mmap(*args_tuple)
+
+# --- Block 7: The 'main' function for the worker ---
+def main():
+    # 1. This script is not interactive. It uses `argparse` to read the command-line arguments that the `launch_comparison.py` script sent it via `bsub`.
+    parser = argparse.ArgumentParser(description="Compares two report files.")
+    parser.add_argument("--file1", required=True)
+    # ... (defines all the expected arguments like --instcol1, --valcol1, etc.) ...
+    parser.add_argument("--output_prefix", required=True)
+    args = parser.parse_args()
+
+    instcol1 = list(map(int, args.instcol1.strip().split(",")))
+    instcol2 = list(map(int, args.instcol2.strip().split(",")))
+    
+    # 2. This is a performance optimization. It creates a pool of 2 processes, so it can parse file1 and file2 *at the same time* instead of one after the other.
+    with multiprocessing.Pool(2) as pool:
+        results = pool.map(parse_file_worker, [
+            (args.file1, instcol1, args.valcol1),
+            (args.file2, instcol2, args.valcol2)
+        ])
+    
+    # 3. Unpacks the results from the parallel processing.
+    data1, instances1 = results[0]
+    data2, instances2 = results[1]
+    
+    # 4. Performs the comparison.
+    miss2, miss1, matched = compare_instances(instances1, instances2)
+
+    # 5. Defines the names for the partial output files using the unique prefix (e.g., "results/run_5_comparison.csv").
+    missing_filename = f"{args.output_prefix}_missing_instances.txt"
+    comparison_filename = f"{args.output_prefix}_comparison.csv"
+    
+    # 6. Calls the writing functions to save the partial results.
+    write_missing_file(os.path.basename(args.file1), os.path.basename(args.file2), miss2, miss1, missing_filename)
+    write_comparison_csv(args.file1, args.file2, data1, data2, matched, comparison_filename)
+    
+    print(f"Comparison for prefix {args.output_prefix} complete.")
+
+# --- Block 8: The Script Entry Point ---
+if __name__ == "__main__":
+    main()
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Python
+IGNORE_WHEN_COPYING_END
+Script 3: merge_results.py
+
+Overall Purpose: This is the "Finisher." After all the worker bees on the LSF cluster are done, you run this script. Its only job is to find all the small, partial result files and neatly stitch them together into your two final reports.
+
+Generated python
+# File: merge_results.py
+# Purpose: Merges all partial results into final output files.
+
+# --- Block 1: Importing Libraries ---
+import os
+import argparse
+
+# --- Block 2: The 'merge_csv_files' function ---
+# This function specifically handles combining the partial CSV files.
+def merge_csv_files(num_shards, prefix, final_filename):
+    """Merges partial CSV files, handling the header correctly."""
+    print(f"-> Merging {num_shards} comparison CSV files into '{final_filename}'...")
+    
+    first_file = f"{prefix}_0_comparison.csv" # 1. Figures out the name of the first result file (e.g., "results/run_0_comparison.csv").
+    if not os.path.exists(first_file):      # 2. Checks if that file exists. If not, something went wrong with the LSF jobs.
+        print(f"  ERROR: Cannot find the first result file: {first_file}")
+        print("  Did the LSF jobs run correctly? Check the 'logs' directory.")
+        return False
+
+    with open(final_filename, "w") as final_out: # 3. Opens the final, master CSV file for writing.
+        # 4. This block handles the first file specially. It copies the ENTIRE content of the first partial file, including its header row, into the final file.
+        with open(first_file, "r") as f_in:
+            final_out.write(f_in.read())
+        
+        # 5. This loop handles all OTHER partial files (from 1 to the end).
+        for i in range(1, num_shards):
+            partial_file = f"{prefix}_{i}_comparison.csv"
+            if os.path.exists(partial_file):
+                with open(partial_file, "r") as f_in:
+                    next(f_in) # 6. This is the key trick: `next(f_in)` reads and discards just the first line (the header) of the partial file.
+                    final_out.write(f_in.read()) # 7. It then writes the REST of the file's content to the final report.
+    return True
+
+# --- Block 3: The 'merge_txt_files' function ---
+# This function is simpler; it just combines all the missing instance text files.
+def merge_txt_files(num_shards, prefix, final_filename):
+    """Concatenates all partial missing instance text files."""
+    print(f"-> Merging {num_shards} missing instance TXT files into '{final_filename}'...")
+    
+    with open(final_filename, "w") as final_out: # 1. Opens the final text file for writing.
+        for i in range(num_shards):             # 2. Loops through all the job numbers.
+            partial_file = f"{prefix}_{i}_missing_instances.txt"
+            if os.path.exists(partial_file):
+                with open(partial_file, "r") as f_in:
+                    final_out.write(f_in.read()) # 3. Reads the entire content of a partial text file...
+                    final_out.write("\n")        # 4. ...and writes it to the final file, adding a newline for spacing.
+    return True
+
+# --- Block 4: The 'main' function ---
+# The main control flow for the merging script.
+def main():
+    parser = argparse.ArgumentParser(description="Merge partial results from parallel LSF runs.")
+    parser.add_argument("--shards", type=int, help="The number of shards/jobs that were run.")
+    args = parser.parse_args()
+    
+    if not args.shards: # 1. If you didn't provide the number of shards as an argument...
+        try:
+            args.shards = int(input("How many parallel jobs were run? (e.g., 5, 10, 20): ")) # 2. ...it will ask you interactively.
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            return
+            
+    prefix = "results/run" # 3. Defines the base path and prefix for the result files.
+    final_csv = "final_comparison.csv"
+    final_txt = "final_missing_instances.txt"
+
+    print("\nStarting to merge results...")
+    # 4. Calls the two merging functions from Block 2 and 3 to do the actual work.
+    csv_ok = merge_csv_files(args.shards, prefix, final_csv)
+    txt_ok = merge_txt_files(args.shards, prefix, final_txt)
+
+    if csv_ok and txt_ok: # 5. If both merging operations were successful...
+        print("\n✅ Merging complete! Your final files are ready:") # 6. ...it prints a final success message.
+        print(f"  -> {final_csv}")
+        print(f"  -> {final_txt}")
+
+# --- Block 5: The Script Entry Point ---
+if __name__ == "__main__":
+    main() # Starts the merging process.
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Python
+IGNORE_WHEN_COPYING_END
