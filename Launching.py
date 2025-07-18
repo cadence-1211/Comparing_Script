@@ -1,5 +1,5 @@
 # File: launch_comparison.py
-# Purpose: A more robust version that prints its commands for debugging.
+# Purpose: A more robust version with simplified and corrected LSF syntax.
 import os
 import subprocess
 import time
@@ -30,7 +30,7 @@ def shard_file(input_file, key_cols, num_shards, output_dir):
     print(f"-> Finished sharding {input_file}.")
 
 def main():
-    """Guides the user, shards files, and submits LSF jobs with automatic dependency."""
+    """Guides the user, shards files, and submits LSF jobs with corrected syntax."""
     start_time = time.time()
     
     print("--- LSF Comparison Job Launcher (Fully Automated) ---")
@@ -61,11 +61,13 @@ def main():
     os.makedirs("logs", exist_ok=True)
     
     python_command = "/grid/common/pkgsData/python-v3.9.6t1/Linux/RHEL8.0-2019-x86_64/bin/python3.9"
-    job_array_name = f"compare_array_{int(time.time())}"
+    # --- MODIFICATION: Using a simpler, safer job name ---
+    job_array_name = "py_compare_array"
     print(f"-> Assigning job array name: {job_array_name}")
 
+    # --- MODIFICATION: Removed quotes around the -J argument ---
     compare_command = (
-        f"bsub -n 2 -R 'rusage[mem=16G]' -o 'logs/output_%I.log' -J '{job_array_name}[0-{shards-1}]' "
+        f"bsub -n 2 -R 'rusage[mem=16G]' -o 'logs/output_%I.log' -J {job_array_name}[0-{shards-1}] "
         f"\"{python_command} compare_adv.py "
         f"--file1 'shards/{os.path.basename(file1)}_shard_%I.txt' "
         f"--file2 'shards/{os.path.basename(file2)}_shard_%I.txt' "
@@ -76,16 +78,14 @@ def main():
     )
 
     merge_command = (
-        f"bsub -w 'done({job_array_name})' -o 'logs/merge_output.log' -J 'merge_job_{job_array_name}' "
+        f"bsub -w 'done({job_array_name})' -o 'logs/merge_output.log' -J merge_{job_array_name} "
         f"\"{python_command} merge_results.py --shards {shards} --start_time {start_time}\""
     )
 
     try:
-        # --- THIS IS THE KEY DEBUGGING STEP ---
         print("\n--- The following commands will be executed ---")
         print(f"COMPARE JOB COMMAND:\n{compare_command}\n")
         print(f"MERGE JOB COMMAND:\n{merge_command}\n")
-        # --- END OF DEBUGGING STEP ---
         
         input("Press Enter to continue and submit these jobs to LSF, or Ctrl+C to cancel...")
 
@@ -97,6 +97,7 @@ def main():
         
     except subprocess.CalledProcessError as e:
         print("\n  ERROR: LSF submission failed. The `bsub` command returned an error.")
+        print("  Please check the command printed above for syntax errors.")
         return
     except KeyboardInterrupt:
         print("\n\nSubmission cancelled by user.")
