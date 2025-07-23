@@ -134,16 +134,39 @@ def compare_instances(instances1, instances2):
     return missing_in_file2, missing_in_file1, matched
 
 
-def write_missing_file(file1_name, file2_name, miss2, miss1):
-    """Writes the lists of missing instances to a text file."""
-    with open("missing_instances.txt", "w", encoding='utf-8') as out:
-        out.write(f"--- Instances from {file1_name} missing in {file2_name} ---\n")
-        for inst in miss2:
-            out.write(f"{' | '.join(k.decode('utf-8', 'ignore') for k in inst)}\n")
+def write_missing_csv(file1_name, file2_name, miss2, miss1, data1, data2, col_name1, col_name2, valcol1, valcol2):
+    """
+    Writes the lists of missing instances, including their data, to a CSV file.
+    """
+    with open("missing_instances.csv", "w", newline="", encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
 
-        out.write(f"\n--- Instances from {file2_name} missing in {file1_name} ---\n")
-        for inst in miss1:
-            out.write(f"{' | '.join(k.decode('utf-8', 'ignore') for k in inst)}\n")
+        # --- Instances missing from File 2 ---
+        writer.writerow([f"--- Instances from {file1_name} missing in {file2_name} ---"])
+        if miss2:
+            key_len = len(miss2[0])
+            headers = [f"Key_{i+1}" for i in range(key_len)] + [f"Value from {file1_name} ({col_name1}, col {valcol1})"]
+            writer.writerow(headers)
+            for inst_key in miss2:
+                key_list = [k.decode('utf-8', 'ignore') for k in inst_key]
+                # Look up the value from the data where it exists (data1)
+                raw_bytes, _ = data1.get(inst_key, (b'N/A', 'N/A'))
+                value_str = raw_bytes.decode('utf-8', 'ignore')
+                writer.writerow(key_list + [value_str])
+
+        # --- Instances missing from File 1 ---
+        writer.writerow([]) # Add a blank row for separation
+        writer.writerow([f"--- Instances from {file2_name} missing in {file1_name} ---"])
+        if miss1:
+            key_len = len(miss1[0])
+            headers = [f"Key_{i+1}" for i in range(key_len)] + [f"Value from {file2_name} ({col_name2}, col {valcol2})"]
+            writer.writerow(headers)
+            for inst_key in miss1:
+                key_list = [k.decode('utf-8', 'ignore') for k in inst_key]
+                # Look up the value from the data where it exists (data2)
+                raw_bytes, _ = data2.get(inst_key, (b'N/A', 'N/A'))
+                value_str = raw_bytes.decode('utf-8', 'ignore')
+                writer.writerow(key_list + [value_str])
 
 
 def write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name1, col_name2, compare_type):
@@ -274,7 +297,9 @@ def main():
     col_name1 = get_column_name(args.file1, args.valcol1)
     col_name2 = get_column_name(args.file2, args.valcol2)
 
-    write_missing_file(file1_name, file2_name, miss2, miss1)
+    # Call the new CSV writer for missing instances
+    write_missing_csv(file1_name, file2_name, miss2, miss1, data1, data2, col_name1, col_name2, args.valcol1, args.valcol2)
+    
     if matched:
         write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name1, col_name2, args.compare_type)
     else:
