@@ -5,8 +5,7 @@ import sys
 import mmap
 import csv
 import multiprocessing
-import re
-import math
+import math # Keep for checking 'nan' and 'inf'
 
 # --- PERFORMANCE-CRITICAL CONSTANTS ---
 # Using a set of bytes is faster for checking prefixes than a list or tuple.
@@ -16,27 +15,6 @@ METADATA_KEYWORDS = {
     b"WINDOW", b"RP_VALUE", b"RP_FORMAT", b"RP_INST_LIMIT", b"RP_THRESHOLD",
     b"RP_PIN_NAME", b"MICRON_UNITS", b"INST_NAME"
 }
-
-
-def _parse_value(byte_string, parse_as):
-    """
-    Parses a byte string into either a float or a string based on the parse_as directive.
-    For numeric parsing, it robustly extracts numbers from messy strings.
-    """
-    if parse_as == 'string':
-        return byte_string.decode('utf-8', 'ignore')
-
-    # --- Robust Numeric Parsing ---
-    s = byte_string.decode('utf-8', 'ignore')
-    # Regex to find the first valid floating point or integer number
-    match = re.search(r'-?(\d+(\.\d*)?|\.\d+)', s)
-    if match:
-        try:
-            return float(match.group(0))
-        except (ValueError, IndexError):
-            return float('nan')
-    # If no number is found in the string, return Not a Number (NaN)
-    return float('nan')
 
 
 def find_chunk_boundaries(file_path, num_chunks):
@@ -68,10 +46,10 @@ def find_chunk_boundaries(file_path, num_chunks):
     return [(boundaries[i], boundaries[i+1]) for i in range(len(boundaries)-1) if boundaries[i] < boundaries[i+1]]
 
 
-def process_chunk(file_path, start_byte, end_byte, inst_cols, value_col, compare_type):
+def process_chunk(file_path, start_byte, end_byte, inst_cols, value_col):
     """
     Worker function: This is the core task executed by each process in the pool.
-    It parses a specific byte chunk of a file, extracting instance data.
+    It uses the ORIGINAL parsing logic to ensure data is read correctly.
     """
     max_col = max(inst_cols + [value_col])
     data = {}
@@ -98,7 +76,14 @@ def process_chunk(file_path, start_byte, end_byte, inst_cols, value_col, compare
                     key = tuple(parts[i] for i in inst_cols)
                     value_bytes = parts[value_col]
                     
-                    val_parsed = _parse_value(value_bytes, compare_type)
+                    # --- ORIGINAL PARSING LOGIC ---
+                    # Tries to convert to float, falls back to string if it fails.
+                    try:
+                        val_parsed = float(value_bytes)
+                    except ValueError:
+                        val_parsed = value_bytes.decode('utf-8', 'ignore')
+
+                    # Store both the raw bytes and the auto-detected parsed value
                     data[key] = (value_bytes, val_parsed)
                     instances_set.add(key)
                 except IndexError:
@@ -107,21 +92,21 @@ def process_chunk(file_path, start_byte, end_byte, inst_cols, value_col, compare
     return data, instances_set
 
 
-def parallel_parse_file(file_path, inst_cols, value_col, compare_type):
+def parallel_parse_file(file_path, inst_cols, value_col):
     """
     Orchestrates the parallel parsing of a single file.
-    It divides the file into chunks and distributes them to a pool of worker processes.
+    NOTE: Does not need compare_type, as parsing logic is now original.
     """
     num_workers = multiprocessing.cpu_count()
     file_name = os.path.basename(file_path)
-    print(f"\n⚙️  Parsing {file_name} with {num_workers} workers (mode: {compare_type})...")
+    print(f"\n⚙️  Parsing {file_name} with {num_workers} workers...")
     
     chunk_boundaries = find_chunk_boundaries(file_path, num_workers)
     if not chunk_boundaries:
         print(f"⚠️  Warning: File {file_name} is empty or could not be read.")
         return {}, set()
 
-    worker_args = [(file_path, start, end, inst_cols, value_col, compare_type) for start, end in chunk_boundaries]
+    worker_args = [(file_path, start, end, inst_cols, value_col) for start, end in chunk_boundaries]
     
     final_data = {}
     final_instances_set = set()
@@ -157,8 +142,11 @@ def write_missing_file(file1_name, file2_name, miss2, miss1):
 
 
 def write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name1, col_name2, compare_type):
-    """Writes the detailed comparison of matched instances to a CSV file."""
-    print("✍️  Writing comparison.csv...")
+    """
+    Writes the detailed comparison CSV. The logic inside this function changes based on
+    the user's chosen compare_type, without affecting the original parsing.
+    """
+    print(f"✍️  Writing comparison.csv (mode: {compare_type})...")
     with open("comparison.csv", "w", newline="", encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
         key_len = len(matched[0]) if matched else 1
@@ -166,9 +154,10 @@ def write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name
             f"{file1_name}_{col_name1}", f"{file2_name}_{col_name2}"
         ]
         
+        # Adjust headers based on comparison type
         if compare_type == 'numeric':
             headers.extend(["Difference", "Deviation"])
-        else:
+        else: # string
             headers.append("Match")
             
         writer.writerow(headers)
@@ -182,25 +171,32 @@ def write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name
             raw2_str = raw_bytes2.decode('utf-8', 'ignore')
 
             if compare_type == 'numeric':
-                if math.isnan(val1) or math.isnan(val2):
-                    writer.writerow(key_list + [raw1_str, raw2_str, "N/A", "Invalid Number"])
-                else:
+                # Check if both values were successfully parsed as floats
+                if isinstance(val1, float) and isinstance(val2, float):
                     diff = val1 - val2
+                    # Handle division by zero
                     deviation = (diff / val2) * 100 if val2 != 0 else float('inf')
                     writer.writerow(key_list + [f"{val1:.4f}", f"{val2:.4f}", f"{diff:.4f}", f"{deviation:.2f}%"])
+                else:
+                    # If one or both are not numbers, report them as strings
+                    writer.writerow(key_list + [raw1_str, raw2_str, "N/A", "Not a Number"])
+            
             else: # 'string' comparison
-                match_status = "YES" if val1 == val2 else "NO"
-                writer.writerow(key_list + [val1, val2, match_status])
+                # Always compare the raw string values
+                match_status = "YES" if raw1_str == raw2_str else "NO"
+                writer.writerow(key_list + [raw1_str, raw2_str, match_status])
 
 
 def get_column_name(file_path, col_index):
-    """Quickly reads the first valid data line of a file to guess the column header name."""
+    """
+    Quickly reads the first valid line of a file to get the column header name.
+    Restored to original, simpler logic.
+    """
     try:
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             for line in f:
-                stripped_line = line.strip()
-                if stripped_line and not stripped_line.startswith("#"):
-                    headers = stripped_line.split()
+                if line.strip() and not line.startswith("#"):
+                    headers = line.strip().split()
                     return headers[col_index] if len(headers) > col_index else f"Column_{col_index + 1}"
     except (FileNotFoundError, IndexError):
         return f"Column_{col_index + 1}"
@@ -257,13 +253,14 @@ def main():
         sys.exit(1)
 
     if len(instcol1) != len(instcol2):
-        print("❌ Error: The number of instance match columns must be the same for both files.")
+        print("Error: The number of instance match columns must be the same for both files.")
         sys.exit(1)
 
     t0 = time.time()
     
-    data1, instances1 = parallel_parse_file(args.file1, instcol1, args.valcol1, args.compare_type)
-    data2, instances2 = parallel_parse_file(args.file2, instcol2, args.valcol2, args.compare_type)
+    # Call the original parsing function
+    data1, instances1 = parallel_parse_file(args.file1, instcol1, args.valcol1)
+    data2, instances2 = parallel_parse_file(args.file2, instcol2, args.valcol2)
 
     print("\n⚖️  Comparing data...")
     miss2, miss1, matched = compare_instances(instances1, instances2)
@@ -277,6 +274,7 @@ def main():
     
     write_missing_file(file1_name, file2_name, miss2, miss1)
     if matched:
+        # Pass compare_type to the CSV writer to control output format
         write_comparison_csv(file1_name, file2_name, data1, data2, matched, col_name1, col_name2, args.compare_type)
     else:
         print("ℹ️  Note: No matched instances found; comparison.csv will be empty.")
@@ -285,14 +283,14 @@ def main():
     
     # --- FINAL SUMMARY ---
     print("\n" + "="*35)
-    print("✅ All tasks completed.")
+    print("All tasks completed.")
     print("="*35)
-    print(f"📄 Instances in {file1_name}: {len(instances1):,}")
-    print(f"📄 Instances in {file2_name}: {len(instances2):,}")
-    print(f"🤝 Matched Instances: {len(matched):,}")
-    print(f"❓ Missing from {file2_name}: {len(miss2):,}")
-    print(f"❓ Missing from {file1_name}: {len(miss1):,}")
-    print(f"\n⏱️  Total execution time: {t1 - t0:.4f} seconds")
+    print(f"Instances in {file1_name}: {len(instances1):,}")
+    print(f"Instances in {file2_name}: {len(instances2):,}")
+    print(f"Matched Instances: {len(matched):,}")
+    print(f"Missing from {file2_name}: {len(miss2):,}")
+    print(f"Missing from {file1_name}: {len(miss1):,}")
+    print(f"\nTotal execution time: {t1 - t0:.4f} seconds")
 
 
 if __name__ == "__main__":
