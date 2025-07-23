@@ -289,15 +289,20 @@ def main():
 
     print("\nComparing data sets...")
     miss2, miss1, matched = compare_instances(instances1, instances2)
+    
+    # --- DEBUGGING LINE ---
+    # This will show the raw counts immediately after calculation to confirm they are correct.
+    print(f"[Debug] Matched: {len(matched):,}, Missing from File 2: {len(miss2):,}, Missing from File 1: {len(miss1):,}")
 
-    print("Writing output files...")
+
+    print("\nWriting output files...")
     file1_name = os.path.basename(args.file1)
     file2_name = os.path.basename(args.file2)
 
     col_name1 = get_column_name(args.file1, args.valcol1)
     col_name2 = get_column_name(args.file2, args.valcol2)
 
-    # Call the new CSV writer for missing instances
+    # Call the CSV writer for missing instances.
     write_missing_csv(file1_name, file2_name, miss2, miss1, data1, data2, col_name1, col_name2, args.valcol1, args.valcol2)
     
     if matched:
