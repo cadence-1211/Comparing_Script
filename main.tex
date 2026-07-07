@@ -1,0 +1,3003 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{AI Matrix Accelerator - RTL to GDS}
+\lhead{Systolic Array Implementation}
+\rfoot{Page \thepage}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue
+}
+
+% Code listing style
+\lstdefinestyle{verilog}{
+    language=Verilog,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    captionpos=b,
+    tabsize=4,
+    showstringspaces=false
+}
+
+% Title page
+% \title{
+%     \Huge\textbf{4x4 Systolic Array AI Accelerator}\\
+%     \Large Hardware Implementation using SkyWater 130nm PDK\\
+%     \vspace{0.5cm}
+%     \large Complete RTL-to-GDSII Flow Report
+% }
+% \author{
+%     Ishaan Singhal\\
+%     Delhi Technological University
+% }
+% \date{}
+
+
+
+
+\title{
+  \vspace{2cm}
+  \textbf{\Huge 4x4 Systolic Array AI Accelerator: Complete RTL-to-GDSII Flow}\\
+  \vspace{1cm}
+  \Large{Project Report}\\
+  \vspace{0.5cm}
+  \large{Hardware Implementation using SkyWater 130nm PDK}\\
+  \vspace{3cm}
+}
+
+\author{\textbf{Ishaan Singhal} \\ Delhi Technological University}
+\date{}
+
+\begin{document}
+
+
+\maketitle
+\thispagestyle{empty}
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\tableofcontents
+\newpage
+
+% ====================================
+% ABSTRACT
+% ====================================
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+This report presents the complete design and physical implementation of a 4×4 systolic array-based matrix multiplication accelerator for artificial intelligence workloads. The accelerator is designed to perform INT8 precision matrix operations, which are fundamental to neural network inference. 
+
+The project encompasses the entire VLSI design flow from Register Transfer Level (RTL) design in SystemVerilog to the generation of a manufacturable GDSII layout file. The implementation uses the open-source OpenLane toolchain with the SkyWater 130nm Process Design Kit (PDK), demonstrating a complete tape-out ready design with zero DRC/LVS violations and timing closure at 100 MHz.
+
+\textbf{Keywords:} Systolic Array, Matrix Multiplication, AI Accelerator, VLSI, RTL-to-GDS, OpenLane, Sky130 PDK
+
+\newpage
+
+% ====================================
+% CHAPTER 1: INTRODUCTION
+% ====================================
+\section{Introduction}
+
+\subsection{Motivation: The Need for AI Accelerators}
+
+Artificial intelligence and deep learning have revolutionized modern computing, powering applications from autonomous vehicles to medical diagnosis. At the heart of these systems lies a computationally intensive operation: \textbf{tensor multiplication}. Neural networks process multi-dimensional data arrays (tensors) through billions of multiply-accumulate operations, creating a severe bottleneck for traditional CPU architectures.
+
+\textbf{Why Traditional CPUs Fail:}
+
+General-purpose CPUs are optimized for sequential instruction execution and branching logic, not for the massive parallel arithmetic required by deep learning workloads. Consider a modern Convolutional Neural Network (CNN) performing image classification:
+
+\begin{itemize}
+    \item A single forward pass through ResNet-50 requires \textbf{~4 billion MAC operations}
+    \item Real-time video processing (30 fps) demands \textbf{120 billion MACs/second}
+    \item A typical CPU can execute \textbf{~10 billion MACs/second} across all cores
+    \item \textbf{Result:} CPUs cannot meet real-time performance requirements
+\end{itemize}
+
+\textbf{The Case for Hardware Acceleration:}
+
+Specialized \textbf{AI accelerators} address this performance gap through architectural innovations:
+
+\begin{enumerate}
+    \item \textbf{Massive Parallelism:} Execute thousands of MAC operations simultaneously instead of sequentially
+    \item \textbf{Optimized Dataflow:} Minimize expensive DRAM accesses by reusing data within on-chip buffers
+    \item \textbf{Reduced Precision:} Use INT8 (8-bit integer) arithmetic instead of FP32, providing 4× memory bandwidth savings and 10× energy efficiency
+    \item \textbf{Fixed-Function Logic:} Eliminate instruction fetch/decode overhead with dedicated compute paths
+\end{enumerate}
+
+\textbf{Project Context:}
+
+This project implements the \textbf{hardware foundation} of a deep learning AI accelerator. While the design does not include trained neural network weights or inference software, it provides the complete \textbf{RTL-to-GDSII silicon implementation} of the computational engine that would execute tensor operations in a production AI system.
+
+\subsection{Understanding the Computing Problem}
+
+\subsubsection{What is INT8 Precision?}
+
+\textbf{INT8 (8-bit Integer)} is a data format where numbers are represented using 8 bits, allowing values from -128 to +127 (signed) or 0 to 255 (unsigned).
+\newpage
+ 
+\textbf{Why INT8 for AI?}
+
+Research has shown that neural networks trained with 32-bit floating-point precision (FP32) can be \textbf{quantized} to 8-bit integers with minimal accuracy loss (<1\% for most models). This quantization provides:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Metric} & \textbf{FP32} & \textbf{INT8} \\
+\midrule
+Memory per value & 4 bytes & 1 byte \\
+Memory bandwidth & 1× & 4× faster \\
+Energy per MAC & 100 pJ & 10 pJ \\
+Hardware area & 1× & 0.15× (6.7× smaller) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For inference (running trained models), INT8 precision is sufficient, making it the industry standard for edge AI devices.
+
+\subsubsection{The Convolution Operation}
+
+Neural networks perform \textbf{convolution}: sliding a small filter (kernel) across input data and computing weighted sums at each position.
+
+\textbf{Mathematical Definition:}
+
+For a 1D convolution with input $\mathbf{x}$ and weights $\mathbf{w}$:
+
+\begin{align}
+    y_1 &= w_1 x_1 + w_2 x_2 + w_3 x_3 + \cdots + w_n x_n \nonumber \\
+    y_2 &= w_1 x_2 + w_2 x_3 + w_3 x_4 + \cdots + w_n x_{n+1} \nonumber
+\end{align}
+
+Each output $y_i$ is a \textbf{dot product} of weights and input values. In 2D (images):
+
+\begin{align}
+    Y[i,j] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} W[m,n] \cdot X[i+m, j+n]
+\end{align}
+
+\textbf{Computational Breakdown:}
+
+A 3×3 convolution filter applied to a 224×224 image with 64 output channels requires:
+\begin{align}
+    \text{Total MACs} &= 224 \times 224 \times 3 \times 3 \times 64 \nonumber \\
+    &= 28,901,376 \text{ operations per layer}
+\end{align}
+
+Modern CNNs have 50-200 such layers, creating the need for specialized hardware.
+
+\subsection{Systolic Array Architecture}
+
+A \textbf{systolic array} is a network of processing elements (PEs) arranged in a grid, where data flows rhythmically through the structure like blood through the heart (hence "systolic"). Each PE performs one multiply-accumulate operation per clock cycle.
+
+\textbf{Key Characteristics:}
+
+\begin{itemize}
+    \item \textbf{Spatial Parallelism:} All 16 PEs in a 4×4 array operate simultaneously
+    \item \textbf{Weight-Stationary Dataflow:} Filter weights remain fixed in PEs while input data streams through
+    \item \textbf{Pipelined Execution:} Data propagates through the array in a wave-like pattern via delay registers
+    \item \textbf{Scalability:} Larger arrays (8×8, 16×16, 256×256) provide proportionally higher throughput
+\end{itemize}
+
+\textbf{Why Systolic Arrays for AI?}
+
+Google's TPU (Tensor Processing Unit), the most successful AI accelerator architecture, uses a 256×256 systolic array. The advantages:
+
+\begin{enumerate}
+    \item \textbf{High Compute Density:} Simple, repeated PE structure maximizes silicon utilization
+    \item \textbf{Efficient Data Reuse:} Each input value is used by multiple PEs without refetching from memory
+    \item \textbf{Predictable Timing:} Regular structure simplifies physical design and timing closure
+    \item \textbf{Energy Efficiency:} Minimal control logic and short interconnects reduce power consumption
+\end{enumerate}
+
+\subsection{System Components Overview}
+
+\subsubsection{Processing Element (PE)}
+
+The \textbf{PE} is the fundamental building block, performing one MAC operation:
+
+\begin{align}
+    \text{result} &\leftarrow \text{result} + (a \times b) \nonumber
+\end{align}
+
+\textbf{Internal Structure:}
+\begin{itemize}
+    \item 8×8 multiplier: Computes product of two INT8 values
+    \item 32-bit accumulator: Prevents overflow when summing many products
+    \item Data forwarding: Passes input values to neighboring PEs
+\end{itemize}
+
+\subsubsection{Systolic Array (4×4 Grid)}
+
+The array connects 16 PEs in a mesh topology:
+\begin{itemize}
+    \item \textbf{Horizontal data flow:} Input activations stream left-to-right
+    \item \textbf{Vertical data flow:} Filter weights stream top-to-bottom
+    \item \textbf{Diagonal computation:} Results accumulate as data propagates through the grid
+\end{itemize}
+
+\subsubsection{Input Buffers (SRAM)}
+
+On-chip \textbf{SRAM buffers} store input matrices temporarily, enabling:
+\begin{itemize}
+    \item \textbf{Data reuse:} Avoid repeated DRAM accesses (100× slower than SRAM)
+    \item \textbf{Burst transfers:} Fill buffers efficiently using AXI-Stream protocol
+    \item \textbf{Systolic skewing:} Delay input rows/columns to create proper timing alignment
+\end{itemize}
+
+Each buffer holds 16 bytes (one 4×4 INT8 matrix).
+
+\subsubsection{Control Unit (FSM)}
+
+A finite state machine manages computation flow:
+\begin{itemize}
+    \item \textbf{IDLE:} Wait for data load completion
+    \item \textbf{COMPUTE:} Enable systolic array operation
+    \item \textbf{DONE:} Signal output results are valid
+\end{itemize}
+
+\subsubsection{AXI-Stream Interface}
+
+\textbf{What is AXI?}
+
+AXI (Advanced eXtensible Interface) is ARM's industry-standard on-chip communication protocol, widely used in SoC designs. \textbf{AXI-Stream} is a simplified variant optimized for unidirectional data streaming.
+
+\textbf{Why AXI-Stream for This Design?}
+
+\begin{enumerate}
+    \item \textbf{Industry Standard:} Easy integration with ARM processors, DMAs, and other IP blocks
+    \item \textbf{Simple Handshaking:} TVALID/TREADY signals implement backpressure flow control
+    \item \textbf{Efficient Streaming:} No address overhead—data flows continuously once transfer starts
+    \item \textbf{Flexible Width:} Supports 8-bit (our case) to 1024-bit data buses
+\end{enumerate}
+
+\textbf{AXI-Stream Signals:}
+\begin{itemize}
+    \item \texttt{TVALID}: Source indicates valid data is available
+    \item \texttt{TREADY}: Destination indicates readiness to accept data
+    \item \texttt{TDATA[7:0]}: 8-bit data payload (one INT8 value per cycle)
+\end{itemize}
+
+Transfer occurs only when both TVALID and TREADY are high, preventing data loss if the buffer is full.
+
+\subsection{Project Objectives}
+
+This project demonstrates \textbf{full-stack hardware design} from algorithmic specification to manufacturable silicon:
+
+\begin{enumerate}
+    \item \textbf{Frontend Design (RTL):}
+    \begin{itemize}
+        \item Design a 4×4 systolic array in SystemVerilog
+        \item Implement AXI-Stream slave interfaces for data ingress
+        \item Integrate SRAM buffers with delay registers for systolic skewing
+        \item Verify functionality through comprehensive testbenches
+    \end{itemize}
+    
+    \item \textbf{Backend Design (RTL-to-GDSII):}
+    \begin{itemize}
+        \item Synthesize RTL to gate-level netlist using SkyWater 130nm PDK
+        \item Complete physical design: floorplanning, placement, CTS, routing
+        \item Achieve timing closure at 100 MHz operating frequency
+        \item Generate DRC/LVS clean GDSII layout ready for fabrication
+    \end{itemize}
+    
+    \item \textbf{Verification and Documentation:}
+    \begin{itemize}
+        \item Perform static timing analysis with extracted parasitics
+        \item Measure power consumption and energy efficiency
+        \item Document the complete design methodology and results
+        \item Demonstrate tape-out readiness through sign-off reports
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+% ====================================
+% CHAPTER 2: DESIGN SPECIFICATION
+% ====================================
+\section{Design Specification and Architecture}
+
+\subsection{System Overview}
+The AI matrix multiplication accelerator consists of a 4×4 grid of processing elements connected in a systolic topology. The system accepts two 4×4 matrices as input through AXI-Stream interfaces and produces a 4×4 result matrix.
+
+\textbf{Top-Level Block Diagram:}
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{top_diagram.png}
+        \textit{Top-level architecture showing: AXI-Stream Interfaces → Input Buffers → Delay Registers → 4×4 Systolic Array → Output Results}
+    }}
+    \caption{System-level block diagram of the AI accelerator}
+    \label{fig:system_block}
+\end{figure}
+
+\subsection{Design Parameters}
+
+\begin{table}[H]
+\centering
+\caption{Design Specifications}
+\label{tab:specs}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Array Configuration & 4×4 (16 Processing Elements) \\
+Data Precision & INT8 (8-bit input, 32-bit accumulator) \\
+Target Frequency & 100 MHz (10 ns period) \\
+Technology Node & SkyWater 130 nm \\
+Interface Protocol & AXI-Stream (slave) \\
+Peak Throughput & 16 MAC ops/cycle = 1.6 GOPS \\
+Input Buffer Size & 16 bytes (per matrix) \\
+Latency & ~27 clock cycles (4×4 matmul) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Architecture Details}
+
+\subsubsection{Processing Element (PE)}
+Each PE is the fundamental computational unit, performing one multiply-accumulate operation per clock cycle.
+
+\textbf{PE Functionality:}
+\begin{align}
+    \text{result\_out} &= \text{result\_out} + (a\_in \times b\_in) \\
+    a\_out &= a\_in \quad \text{(horizontal forwarding)} \\
+    b\_out &= b\_in \quad \text{(vertical forwarding)}
+\end{align}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+        \centering
+        \includegraphics[width=0.85\textwidth]{pe_logic_diagram.png}
+        \textit{32-bit accumulator → Data forwarding paths}
+    }}
+    \caption{Processing Element (PE) internal architecture}
+    \label{fig:pe_arch}
+\end{figure}
+
+\newpage
+
+\subsubsection{Systolic Dataflow with Skewing}
+The systolic array requires carefully orchestrated data arrival times. Input data must be staggered (skewed) to create the correct wave-like propagation pattern through the array.
+
+\textbf{Skewing Strategy:}
+\begin{itemize}
+    \item Row 0 (a0): No delay (0 cycles)
+    \item Row 1 (a1): 1-cycle delay register
+    \item Row 2 (a2): 2-cycle delay register
+    \item Row 3 (a3): 3-cycle delay register
+    \item Same pattern for columns (b0-b3)
+\end{itemize}
+
+This ensures that corresponding elements meet at the correct PE at the correct time for proper matrix multiplication.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+        \includegraphics[width=0.85\textwidth]{systolic_array.png}
+        
+        \textit{4×4 grid with arrows indicating data flow direction and timing}
+    }}
+    \caption{Systolic array dataflow with skewed inputs}
+    \label{fig:dataflow}
+\end{figure}
+
+\subsubsection{AXI-Stream Interface}
+The design implements two AXI-Stream slave interfaces for streaming matrix data into input buffers.
+
+\textbf{AXI-Stream Signals:}
+\begin{itemize}
+    \item \texttt{s\_axis\_tvalid}: Master indicates valid data
+    \item \texttt{s\_axis\_tready}: Slave indicates ready to accept
+    \item \texttt{s\_axis\_tdata[7:0]}: 8-bit data payload
+\end{itemize}
+
+\textbf{Handshaking Protocol:} Data transfer occurs only when both valid and ready are high simultaneously, implementing backpressure flow control.
+
+\newpage
+
+% ====================================
+% CHAPTER 3: RTL DESIGN
+% ====================================
+\section{RTL Design and Implementation}
+
+\subsection{Design Hierarchy}
+
+The complete RTL design follows a modular, hierarchical structure for maintainability and reusability.
+
+\begin{tcolorbox}[colback=gray!5,colframe=black,title=Design Hierarchy]
+\begin{verbatim}
+top.v (Top-level integration)
+  +-- buffer.v (x2) - AXI-Stream input buffers
+  |     +-- 16x8-bit memory array
+  |     +-- Write pointer logic
+  |     +-- Read pointer logic
+  |     +-- AXI handshaking
+  |
+  +-- Delay Registers - Systolic timing skew
+  |     +-- a1_d1, a2_d2, a3_d3
+  |     +-- b1_d1, b2_d2, b3_d3
+  |
+  +-- systolic_array.v - 4x4 PE grid
+        +-- pe.v (x16) - Processing Elements
+              +-- 8x8 multiplier
+              +-- 32-bit accumulator
+              +-- Data forwarding (a_out, b_out)
+\end{verbatim}
+\end{tcolorbox}
+
+\subsection{Module Descriptions}
+
+\subsubsection{Processing Element (pe.v)}
+
+The PE module implements the core multiply-accumulate functionality with data forwarding.
+
+\begin{lstlisting}[style=verilog,caption={Processing Element Implementation},label={lst:pe}]
+module pe (
+    input logic clk,
+    input logic rst,
+
+    input logic [7:0] a_in,
+    input logic [7:0] b_in,
+
+    output logic [7:0] a_out,
+    output logic [7:0] b_out,
+    
+    output logic [31:0] result_out
+);
+    
+always_ff @(posedge clk or posedge rst) begin
+    if (rst) begin 
+        a_out <= 8'b0;
+        b_out <= 8'b0;
+        result_out <= 32'b0;
+    end 
+    else begin
+        a_out <= a_in;
+        b_out <= b_in;
+        result_out <= result_out + (a_in * b_in);
+    end
+end
+endmodule
+\end{lstlisting}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Synchronous design with clock and reset
+    \item 8-bit input operands (a\_in, b\_in)
+    \item 32-bit accumulator prevents overflow
+    \item Registered outputs for pipelining
+    \item Data forwarding maintains systolic flow
+\end{itemize}
+
+\newpage
+
+\subsubsection{Systolic Array (systolic\_array.v)}
+
+The systolic array module instantiates 16 PEs in a 4×4 grid configuration with proper interconnections.
+
+\begin{lstlisting}[style=verilog,caption={Systolic Array - 4x4 Grid (Excerpt)},label={lst:array}]
+module systolic_array (
+    input logic clk, rst,
+    input logic [7:0] a0, a1, a2, a3,
+    input logic [7:0] b0, b1, b2, b3,
+    output logic [31:0] result00, result01, result02, result03,
+    output logic [31:0] result10, result11, result12, result13,
+    output logic [31:0] result20, result21, result22, result23,
+    output logic [31:0] result30, result31, result32, result33
+);
+
+// Internal wires
+logic [7:0] a00, a01, a02, a03;
+logic [7:0] b00, b01, b02, b03;
+
+// PE instantiation example - Row 0
+pe pe00 (
+    .clk(clk), .rst(rst),
+    .a_in(a0), .b_in(b0),
+    .a_out(a00), .b_out(b00),
+    .result_out(result00)
+);
+
+pe pe01 (
+    .clk(clk), .rst(rst),
+    .a_in(a00), .b_in(b1),
+    .a_out(a01), .b_out(b01),
+    .result_out(result01)
+);
+
+// ... Similar instantiations for all 16 PEs ...
+
+endmodule
+\end{lstlisting}
+
+\textbf{Interconnection Strategy:}
+\begin{itemize}
+    \item Horizontal connections: PE[i][j].a\_out → PE[i][j+1].a\_in
+    \item Vertical connections: PE[i][j].b\_out → PE[i+1][j].b\_in
+    \item Edge PEs receive external inputs
+    \item All PE results exposed as outputs
+\end{itemize}
+
+\newpage
+
+\subsubsection{AXI-Stream Buffer (buffer.v)}
+
+The buffer module implements an AXI-Stream interface with storage and read logic.
+
+\begin{lstlisting}[style=verilog,caption={AXI-Stream Buffer with Handshaking},label={lst:buffer}]
+module buffer (
+    input logic clk, rst,
+    input logic s_axis_tvalid,
+    output logic s_axis_tready,
+    input logic [31:0] s_axis_tdata,
+    output logic [7:0] row0, row1, row2, row3,
+    input logic read_enable
+);
+
+logic [7:0] mem [0:15];
+logic [3:0] write_ptr;
+logic full_flag;
+
+assign s_axis_tready = ~full_flag;
+
+// Write logic
+always_ff @(posedge clk or posedge rst) begin
+    if(rst) begin
+        write_ptr = 0;
+        full_flag = 0;
+    end else if (s_axis_tvalid && s_axis_tready) begin
+        mem[write_ptr] <= s_axis_tdata[7:0];
+        write_ptr <= write_ptr + 1;
+        if (write_ptr == 15) full_flag <= 1;
+    end
+end
+
+// Read logic
+always_ff @(posedge clk or posedge rst) begin
+    if (rst) begin
+        row0 <= 0; row1 <= 0; row2 <= 0; row3 <= 0;
+    end else if (read_enable) begin
+        row0 <= mem[0]; row1 <= mem[4];
+        row2 <= mem[8]; row3 <= mem[12];
+    end
+end
+
+endmodule
+\end{lstlisting}
+
+\textbf{Operation Modes:}
+\begin{enumerate}
+    \item \textbf{Write Mode:} Accepts streaming data when valid \& ready
+    \item \textbf{Full Condition:} Deasserts ready when 16 bytes stored
+    \item \textbf{Read Mode:} Outputs 4 values per cycle when read\_enable is high
+    \item \textbf{Transpose:} Data arranged for column-wise feeding into array
+\end{enumerate}
+
+\newpage
+
+\subsubsection{Top-Level Integration (top.v)}
+
+The top module integrates all components and implements the  delay registers for systolic timing.
+
+\begin{lstlisting}[style=verilog,caption={Top-Level Integration with Skewing Logic (Excerpt)},label={lst:top}]
+module top (
+    input logic clk, rst,
+    input logic s_axis_a_valid, s_axis_b_valid,
+    output logic s_axis_a_ready, s_axis_b_ready,
+    input logic [7:0] s_axis_a_data, s_axis_b_data,
+    input logic start_compute,
+    output logic done,
+    output logic [31:0] result00, result01, result02, result03,
+    // ... other results ...
+);
+
+logic [7:0] raw_a0, raw_a1, raw_a2, raw_a3;
+logic [7:0] raw_b0, raw_b1, raw_b2, raw_b3;
+
+// Delay registers for systolic skewing
+logic [7:0] a1_d1;
+logic [7:0] a2_d1, a2_d2;
+logic [7:0] a3_d1, a3_d2, a3_d3;
+logic [7:0] b1_d1;
+logic [7:0] b2_d1, b2_d2;
+logic [7:0] b3_d1, b3_d2, b3_d3;
+
+// Buffer instantiations
+buffer buf_a (/* connections */);
+buffer buf_b (/* connections */);
+
+// Delay implementation
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        a1_d1 <= 0;
+        a2_d1 <= 0; a2_d2 <= 0;
+        a3_d1 <= 0; a3_d2 <= 0; a3_d3 <= 0;
+    end else begin
+        a1_d1 <= raw_a1;
+        a2_d1 <= raw_a2; a2_d2 <= a2_d1;
+        a3_d1 <= raw_a3; a3_d2 <= a3_d1; a3_d3 <= a3_d2;
+    end
+end
+// Systolic array instantiation
+systolic_array arr (
+    .clk(clk), .rst(rst),
+    .a0(raw_a0), .a1(a1_d1), .a2(a2_d2), .a3(a3_d3),
+    .b0(raw_b0), .b1(b1_d1), .b2(b2_d2), .b3(b3_d3),
+    .result00(result00), /* ... other results ... */
+);
+endmodule
+\end{lstlisting}
+
+\textbf{Delay Register Implementation:}
+
+The delay registers create the essential skewing pattern:
+
+\begin{lstlisting}[style=verilog]
+// Matrix A delays (horizontal)
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        a1_d1 <= 0;
+        a2_d1 <= 0; a2_d2 <= 0;
+        a3_d1 <= 0; a3_d2 <= 0; a3_d3 <= 0;
+    end else begin
+        a1_d1 <= raw_a1;            // 1-cycle delay
+        a2_d1 <= raw_a2;            // First stage
+        a2_d2 <= a2_d1;             // 2-cycle delay
+        a3_d1 <= raw_a3;            // First stage
+        a3_d2 <= a3_d1;             // Second stage
+        a3_d3 <= a3_d2;             // 3-cycle delay
+    end
+end
+\end{lstlisting}
+
+This staggering ensures that matrix elements arrive at the correct PE at the correct time for accurate multiplication.
+
+
+
+
+\newpage
+
+\subsection{Control Unit}
+
+A control unit module was developed to manage the computation flow and generate the done signal.
+
+\begin{lstlisting}[style=verilog,caption={Control Unit FSM (Conceptual)},label={lst:control}]
+module control_unit (
+    input logic clk, rst,
+    input logic start,
+    output logic done,
+    output logic compute_enable
+);
+
+typedef enum {IDLE, COMPUTE, DONE_STATE} state_t;
+state_t current_state, next_state;
+
+// State transition logic
+always_ff @(posedge clk or posedge rst) begin
+    if (rst) current_state <= IDLE;
+    else current_state <= next_state;
+end
+
+// Next state and output logic
+always_comb begin
+    case (current_state)
+        IDLE: begin
+            done = 0;
+            compute_enable = 0;
+            if (start) next_state = COMPUTE;
+            else next_state = IDLE;
+        end
+        COMPUTE: begin
+            done = 0;
+            compute_enable = 1;
+            // Transition to DONE after fixed cycles
+            next_state = DONE_STATE;
+        end
+        DONE_STATE: begin
+            done = 1;
+            compute_enable = 0;
+            next_state = IDLE;
+        end
+    endcase
+end
+
+endmodule
+\end{lstlisting}
+\newpage
+
+\textbf{State Machine:}
+\begin{itemize}
+    \item \textbf{IDLE:} Waiting for start signal
+    \item \textbf{COMPUTE:} Array processing active
+    \item \textbf{DONE:} Computation complete, results valid
+\end{itemize}
+\subsection{Verification and Simulation}
+
+\subsubsection{Testbench Architecture}
+
+Comprehensive testbenches were developed at multiple levels of hierarchy:
+
+\textbf{1. PE-Level Testbench:}
+\begin{lstlisting}[style=verilog,caption={PE Module Testbench (Excerpt)},label={lst:pe_tb}]
+module pe_tb;
+reg clk, rst;
+reg [7:0] a_in, b_in;
+wire [7:0] a_out, b_out;
+wire [31:0] result_out;
+
+pe uut (.clk(clk), .rst(rst), .a_in(a_in), .b_in(b_in),
+        .a_out(a_out), .b_out(b_out), .result_out(result_out));
+
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
+
+initial begin
+    rst = 1; #10 rst = 0;
+    
+    // Test: 3 * 4 = 12
+    a_in = 3; b_in = 4; #10;
+    $display("Result = %d", result_out);
+    
+    $finish;
+end
+endmodule
+\end{lstlisting}
+
+\newpage
+
+\textbf{2. Array-Level Testbench:}
+\begin{lstlisting}[style=verilog,caption={Systolic Array Testbench (Excerpt)},label={lst:array_tb}]
+module systolic_tb_4x4;
+reg clk, rst;
+reg [7:0] a0, a1, a2, a3;
+reg [7:0] b0, b1, b2, b3;
+wire [31:0] result00, result01, result02, result03;
+// ... other results ...
+
+systolic_array uut (
+    .clk(clk), .rst(rst),
+    .a0(a0), .a1(a1), .a2(a2), .a3(a3),
+    .b0(b0), .b1(b1), .b2(b2), .b3(b3),
+    .result00(result00), /* ... */
+);
+
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
+
+initial begin
+    rst = 1; #10 rst = 0;
+    
+    // Load identity matrix test
+    a0 = 1; a1 = 2; a2 = 3; a3 = 4;
+    b0 = 1; b1 = 0; b2 = 0; b3 = 0;
+    
+    #500; // Wait for computation
+    
+    $display("Results: %d %d %d %d", 
+             result00, result01, result02, result03);
+    $finish;
+end
+endmodule
+\end{lstlisting}
+
+\newpage
+
+\textbf{3. System-Level Testbench:}
+\begin{lstlisting}[style=verilog,caption={Top-Level Integration Testbench (Excerpt)},label={lst:top_tb}]
+module top_tb;
+reg clk, rst;
+reg s_axis_a_valid, s_axis_b_valid;
+reg [7:0] s_axis_a_data, s_axis_b_data;
+reg start_compute;
+wire s_axis_a_ready, s_axis_b_ready;
+wire done;
+wire [31:0] result00, result01, result02, result03;
+// ... other results ...
+
+top uut (
+    .clk(clk), .rst(rst),
+    .s_axis_a_valid(s_axis_a_valid),
+    .s_axis_a_ready(s_axis_a_ready),
+    .s_axis_a_data(s_axis_a_data),
+    .s_axis_b_valid(s_axis_b_valid),
+    .s_axis_b_ready(s_axis_b_ready),
+    .s_axis_b_data(s_axis_b_data),
+    .start_compute(start_compute),
+    .done(done),
+    .result00(result00), /* ... */
+);
+
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
+
+initial begin
+    rst = 1; #10 rst = 0;
+    
+    // Stream matrix A via AXI
+    s_axis_a_valid = 1;
+    s_axis_a_data = 8'd1; #10;
+    s_axis_a_data = 8'd2; #10;
+    // ... stream all 16 values ...
+    s_axis_a_valid = 0;
+    
+    // Start computation
+    start_compute = 1; #10;
+    start_compute = 0;
+    
+    // Wait for done
+    wait(done);
+    $display("Computation complete!");
+    $finish;
+end
+endmodule
+\end{lstlisting}
+
+
+
+
+\newpage
+
+
+\subsubsection{Simulation Results}
+
+\textbf{Test Case: Identity Matrix Multiplication}
+
+Input matrices:
+\begin{align*}
+A &= \begin{bmatrix} 1 & 2 & 3 & 4 \\ 5 & 6 & 7 & 8 \\ 1 & 1 & 1 & 1 \\ 2 & 2 & 2 & 2 \end{bmatrix}, \quad
+B &= \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \end{bmatrix}
+\end{align*}
+
+Expected result: $C = A \times B = A$
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{simulation_waveform.png}
+    \caption{Simulation waveform showing correct matrix multiplication}
+    \label{fig:sim_waveform}
+\end{figure}
+
+\textbf{Verification Results:}
+\begin{itemize}
+    \item ✓ All 16 result values match expected output
+    \item ✓ Timing behavior correct (27-cycle latency observed)
+    \item ✓ AXI handshaking operates correctly
+    \item ✓ No X or Z values in outputs
+    \item ✓ Reset functionality verified
+\end{itemize}
+
+\newpage
+
+
+
+
+
+
+
+
+
+
+\section{OpenLane Output File Formats: Detailed Analysis}
+
+This section provides an in-depth examination of the key file formats generated during the OpenLane RTL-to-GDSII flow. Each format is explained with real examples extracted from the implemented design, demonstrating how to interpret and analyze these files for verification and optimization purposes.
+
+\subsection{LEF - Library Exchange Format}
+
+\subsubsection{Introduction}
+
+The Library Exchange Format (LEF) is a standardized ASCII file that contains the abstract physical view of standard cells and macro blocks. Unlike full layout files (GDSII), LEF provides only the information necessary for place-and-route tools: cell dimensions, pin locations, and routing obstructions. This abstraction protects proprietary transistor-level IP while enabling automated physical design.
+
+LEF files serve two primary purposes in the design flow: (1) they define the technology-specific metal layers, vias, and design rules (technology LEF), and (2) they provide abstract representations of standard cells and macros for placement and routing (cell LEF/macro LEF).
+
+\subsubsection{File Structure and Contents}
+
+% \textbf{Source:} \texttt{results/final/lef/top.lef}
+
+\textbf{Example - Top-Level Macro Definition:}
+
+% \begin{lstlisting}[caption={LEF Macro Definition from top.lef (Lines 1-9)}]
+% VERSION 5.7 ;
+%   NOWIREEXTENSIONATPIN ON ;
+%   DIVIDERCHAR "/" ;
+%   BUSBITCHARS "[]" ;
+% MACRO top
+%   CLASS BLOCK ;
+%   FOREIGN top ;
+%   ORIGIN 0.000 0.000 ;
+%   SIZE 600.000 BY 600.000 ;
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{lef1.png}
+    }}
+    \caption{LEF Macro Definition from top.lef}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+\textbf{Analysis:}
+
+The macro definition header establishes the top-level design block. The \texttt{SIZE} directive specifies the die dimensions as 600 µm × 600 µm, matching the design specification of 0.36 mm². The \texttt{ORIGIN} coordinates define the lower-left corner of the block in the parent coordinate system.
+
+\newpage
+
+\textbf{Example - Power Grid Pin Definition:}
+
+% \begin{lstlisting}[caption={Power Pin Geometry from top.lef (Lines 10-30)}]
+%   PIN VGND
+%     DIRECTION INOUT ;
+%     USE GROUND ;
+%     PORT
+%       LAYER met4 ;
+%         RECT 8.020 10.640 9.620 587.760 ;
+%     END
+%     PORT
+%       LAYER met4 ;
+%         RECT 38.020 10.640 39.620 587.760 ;
+%     END
+%     PORT
+%       LAYER met4 ;
+%         RECT 68.020 10.640 69.620 587.760 ;
+%     END
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.7\textwidth]{lef2.png}
+    }}
+    \caption{Power Pin Geometry from top.lef}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+
+
+
+\textbf{Significance:}
+
+Each \texttt{RECT} entry defines a vertical power stripe on metal layer 4 (met4). The coordinates (x1, y1, x2, y2) specify stripe locations at 30 µm pitch, consistent with the PDN configuration. Multiple PORT entries for a single pin indicate a distributed power grid with parallel stripes for reduced IR drop. The stripe width (1.6 µm = 9.620 - 8.020) meets minimum width rules while providing adequate current capacity.
+
+\textbf{Design Implications:}
+
+\begin{itemize}
+    \item \textbf{Stripe Width ($W$):}
+    Derived from the first \texttt{RECT} entry (8.020 10.640 9.620 587.760). The width is the difference between the x-coordinates ($x_{max} - x_{min}$):
+    \begin{equation}
+        W = 9.620 - 8.020 = \mathbf{1.60 \, \mu m}
+    \end{equation}
+
+    \item \textbf{Stripe Pitch ($P$):}
+    Derived by comparing the starting x-coordinates of the first two vertical stripes (First starts at 8.020, Second starts at 38.020).
+    \begin{equation}
+        P = x_{start\_2} - x_{start\_1} = 38.020 - 8.020 = \mathbf{30.00 \, \mu m}
+    \end{equation}
+\end{itemize}
+
+
+
+
+
+\newpage
+
+\subsection{DEF - Design Exchange Format}
+
+\subsubsection{Introduction}
+
+The Design Exchange Format (DEF) describes the complete physical implementation of a design, including cell placement coordinates, routing geometry, and special nets (power/ground). Unlike LEF, which provides abstract cell views, DEF contains the actual instantiated netlist with precise (x,y) locations and metal-layer routing paths.
+
+DEF files evolve through the physical design flow: floorplan DEF establishes die boundaries and rows; placement DEF adds cell coordinates; CTS DEF inserts clock buffers; routing DEF completes all net connections. Each stage produces a progressively detailed DEF file, enabling incremental verification and debugging.
+
+\subsubsection{File Structure and Analysis}
+
+% \textbf{Source:} \texttt{results/final/def/top.def}
+
+\textbf{Example - Design Header:}
+
+% \begin{lstlisting}[caption={DEF Header (Typical Structure)}]
+% VERSION 5.8 ;
+% DESIGN top ;
+% UNITS DISTANCE MICRONS 1000 ;
+
+% DIEAREA ( 0 0 ) ( 600000 600000 ) ;
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{def1.png}
+    }}
+    \caption{DEF Header (Typical Structure)}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+\textit{(Source: \texttt{results/results/final/def/top.def})}
+
+
+\textbf{Analysis:}
+
+The \texttt{UNITS} directive specifies that all coordinates are expressed in database units, where 1000 units = 1 micron. Thus, the \texttt{DIEAREA} coordinates (600000, 600000) represent 600 µm × 600 µm. This unit system allows integer arithmetic in place-and-route tools while maintaining sub-nanometer precision (1 DBU = 1 nm in this case).
+
+\newpage
+
+\textbf{Example - Component Placement:}
+
+% \begin{lstlisting}[caption={Cell Instance Placement (Typical)}]
+% COMPONENTS 11362 ;
+% - _18376_ sky130_fd_sc_hd__dfrtp_4 + PLACED 
+%     ( 234500 156700 ) N ;
+% - _18377_ sky130_fd_sc_hd__nand2_1 + PLACED 
+%     ( 241200 159800 ) FS ;
+% - _13399_ sky130_fd_sc_hd__clkbuf_4 + PLACED 
+%     ( 247800 162900 ) N ;
+% END COMPONENTS
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{def2.png}
+    }}
+    \caption{Cell Instance Placement (Typical)}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+\textit{(Source: \texttt{results/results/final/def/top.def})}
+
+\textbf{Significance:}
+
+Each component entry specifies:
+\begin{itemize}
+    \item \textbf{Instance name} (ANTENNA\_1): Synthesized cell identifier
+    \item \textbf{Cell type} (sky130\_fd\_sc\_hd\_\_diode\_2): 
+    \item \textbf{Placement status} (PLACED): Legalized location (vs FIXED/UNPLACED)
+    \item \textbf{Coordinates} (162840, 119680): Lower-left corner in DBU (162.84 µm, 119.68 µm)
+    \item \textbf{Orientation} (N/FS): North (0°) or FlipSouth (180° + mirrored)
+\end{itemize}
+
+The coordinates enable precise distance calculations for timing analysis. For instance, the Manhattan distance between ANTENNA\_1 and ANTENNA\_2 is:
+\begin{align}
+    d &= |162.84 - 351.44| + |119.68 - 171.36| = 188.6 + 51.68 = 240.28 \text{ µm}
+\end{align}
+
+This affects interconnect delay if these cells are on the critical path.
+
+\newpage
+
+\subsection{SPEF - Standard Parasitic Exchange Format}
+
+\subsubsection{Introduction}
+
+The Standard Parasitic Exchange Format (SPEF) contains extracted resistance and capacitance values for all nets in the routed design. These parasitic values, extracted from the physical layout using field solvers, account for wire resistance, self-capacitance, and coupling capacitance between adjacent nets. SPEF is essential for accurate post-route timing analysis, as interconnect delay often dominates gate delay in modern process nodes.
+
+The extraction process analyzes metal geometries from the DEF file, applies layer-specific resistance and capacitance models from the technology file, and generates a distributed RC network for each net. This network is then reduced to a simplified model (typically Elmore delay model) for efficient timing calculation.
+
+\subsubsection{File Structure with Real Example}
+
+
+
+\textbf{Header Section:}
+
+% \begin{lstlisting}[caption={SPEF Header from top.spef (Lines 1-15)}]
+% *SPEF "ieee 1481-1999"
+% *DESIGN "top"
+% *DATE "11:11:11 Fri 11 11, 1111"
+% *VENDOR "OpenRCX"
+% *PROGRAM "Parallel Extraction"
+% *VERSION "1.0"
+% *DESIGN_FLOW "NAME_SCOPE LOCAL" "PIN_CAP NONE"
+% *DIVIDER /
+% *DELIMITER :
+% *BUS_DELIMITER []
+% *T_UNIT 1 NS
+% *C_UNIT 1 PF
+% *R_UNIT 1 OHM
+% *L_UNIT 1 HENRY
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{SPEF.png}
+    }}
+    \caption{SPEF Header from top.spef (Lines 1-15)}
+    \label{fig:system_block}
+\end{figure}
+
+\textit{(Source: \texttt{results/results/final/spef/top.spef})}
+
+
+
+
+
+\textbf{Analysis:}
+
+The unit definitions establish that capacitances are in picofarads (1 pF = $10^{-12}$ F) and resistances in ohms. The namespace delimiters allow hierarchical net names like \texttt{module/submodule:net[0]}.
+\newpage
+\textbf{Example - Clock Net Parasitics:}
+
+% \begin{lstlisting}[caption={Clock Net Extraction from top.spef}]
+% *D_NET *3 0.0906422
+% *CONN
+% *P clk I
+% *I *11408:DIODE I *D sky130_fd_sc_hd__diode_2
+% *I *51648:A I *D sky130_fd_sc_hd__clkbuf_16
+% *I *11419:DIODE I *D sky130_fd_sc_hd__diode_2
+% *CAP
+% 1 clk 0.0174651
+% 2 *11408:DIODE 0
+% 3 *51648:A 0
+% 4 *11419:DIODE 0.000137775
+% 5 *3:31 0.000961198
+% 6 *3:23 0.00094304
+% 7 *3:19 0.0147747
+% 8 *3:11 0.0321202
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{SPEF2.png}
+    }}
+    \caption{Clock Net Extraction from top.spef}
+    \label{fig:system_block}
+\end{figure}
+
+\textit{(Source: \texttt{results/results/final/spef/top.spef})}
+
+
+
+\textbf{Detailed Analysis:}
+
+\begin{table}[H]
+\centering
+\caption{Clock Net Parasitic Breakdown}
+\label{tab:spef_analysis}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Interpretation} \\
+\midrule
+Total Net Capacitance & 0.0906 pF & High due to 1,146 flip-flop fanout \\
+Pin \texttt{clk} Cap & 0.0175 pF & Input capacitance at top-level port \\
+Node *3:11 Cap & 0.0321 pF & Branch point with heavy loading \\
+Node *3:19 Cap & 0.0148 pF & Secondary distribution point \\
+\midrule
+\multicolumn{3}{l}{\textit{Total capacitance sums all node caps}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\newpage
+\textbf{Coupling Capacitance Example:}
+
+
+These entries represent capacitive coupling between clock net node \texttt{*3:11} and adjacent signal nets. The largest coupling (3.31 fF to net \texttt{*10594:22}) indicates proximity in routing, which can cause crosstalk noise if these nets transition simultaneously.
+
+\textbf{Timing Impact Calculation:}
+
+For a net segment with $R = 10 \Omega$ and $C = 0.01$ pF:
+\begin{align}
+    t_{\text{delay}} &= 0.69 \times R \times C \nonumber \\
+    &= 0.69 \times 10 \times 0.01 \times 10^{-12} \nonumber \\
+    &= 69 \times 10^{-15} \text{ s} = 0.069 \text{ ps (negligible)}
+\end{align}
+
+However, for the entire clock network with $C_{\text{total}} = 90.6$ fF and estimated $R_{\text{total}} = 100 \Omega$:
+\begin{align}
+    t_{\text{clk}} &= 0.69 \times 100 \times 90.6 \times 10^{-15} = 6.25 \text{ ps}
+\end{align}
+
+This contributes to clock insertion delay and must be factored into timing analysis.
+
+\newpage
+
+\subsection{LIB - Liberty Timing Library}
+
+\subsubsection{Introduction}
+
+Liberty (.lib) files contain comprehensive timing, power, and electrical characterization data for standard cells. Unlike LEF files which describe physical geometry, Liberty files model cell behavior: propagation delays as functions of input slew and output load, power consumption during transitions, and setup/hold constraints for sequential elements. These models, derived from SPICE simulations across process corners, enable accurate static timing analysis without running expensive circuit-level simulations.
+
+The Liberty format uses lookup tables (LUTs) to capture non-linear delay and power relationships. For example, a gate's delay depends on both the input signal slew rate (how fast the input transitions) and the output load capacitance (how much charge must be moved). By pre-computing delays across a grid of (slew, load) pairs, timing tools can interpolate for any operating condition.
+
+\subsubsection{Structure and Example Analysis}
+
+% \textbf{Source:} \texttt{PDK/sky130\_fd\_sc\_hd\_\_tt\_025C\_1v80.lib} (Technology library)
+
+\textbf{Note:} The uploaded \texttt{top.lib} is design-specific; analysis uses standard PDK library.
+
+\textbf{Example - Cell Definition:}
+
+% \begin{lstlisting}[caption={Liberty Cell Entry (sky130 AND2 gate)}]
+% cell (sky130_fd_sc_hd__and2_1) {
+%   area : 3.744 ;  /* Square microns */
+%   cell_leakage_power : 1.234e-09 ; /* Watts */
+  
+%   pin(A) {
+%     direction : input ;
+%     capacitance : 0.00153 ; /* pF */
+%     max_transition : 1.5 ;
+%   }
+  
+%   pin(Y) {
+%     direction : output ;
+%     function : "(A & B)" ;
+%     max_capacitance : 0.05 ;
+    
+%     timing() {
+%       related_pin : "A" ;
+%       timing_sense : positive_unate ;
+%       cell_rise(delay_template_5x5) {
+%         index_1 ("0.01, 0.05, 0.1, 0.3, 0.5"); /* Input slew */
+%         index_2 ("0.001, 0.005, 0.01, 0.03, 0.05"); /* Output load */
+%         values ( \
+%           "0.123, 0.145, 0.178, 0.234, 0.289", \
+%           "0.134, 0.156, 0.189, 0.245, 0.301", \
+%           "0.156, 0.178, 0.211, 0.267, 0.323", \
+%           "0.189, 0.211, 0.244, 0.300, 0.356", \
+%           "0.222, 0.244, 0.277, 0.333, 0.389"  \
+%         );
+%       }
+%     }
+%   }
+% }
+% \end{lstlisting}
+
+
+
+% \begin{figure}[H]
+%     \centering
+%     \fbox{\parbox{0.9\textwidth}{
+%         \centering
+
+%         \includegraphics[width=0.45\textwidth]{luttable.png}
+%         % \includegraphics[width=0.85\textwidth]{celldef.png}
+%     }}
+%     \caption{Liberty LookUp Table (LUT)}
+%     \label{fig:system_block}
+% \end{figure}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+
+        \includegraphics[width=0.45\textwidth]{defaultval.png}
+        % \includegraphics[width=0.85\textwidth]{celldef.png}
+    }}
+    \caption{Default values in .lib file}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+
+
+        % \includegraphics[width=0.85\textwidth]{luttable.png}
+        \includegraphics[width=0.45\textwidth]{celldef.png}
+    }}
+    \caption{Cell Definition}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.45\textwidth]{luttable.png}
+        % \includegraphics[width=0.85\textwidth]{celldef.png}
+    }}
+    \caption{Liberty LookUp Table (LUT)}
+    \label{fig:system_block}
+\end{figure}
+
+
+\textbf{Detailed Analysis:}
+
+\begin{table}[H]
+\centering
+\caption{sky130\_fd\_sc\_hd\_\_and2\_1 Cell Interpretation}
+\label{tab:lib_lut}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Field} & \textbf{Significance} \\
+\midrule
+\texttt{function : "(A \& B)"} & Boolean logic for functional verification \\
+\texttt{area : 6.256} & Cell footprint for area optimization \\
+\texttt{cell\_leakage\_power} & Static power (0.0014741 nW at 25°C, 1.8V) \\
+\texttt{capacitance :  0.1583960000} & Input pin load affects driver sizing \\
+\texttt{index\_1} & Input transition time \\
+\texttt{index\_2} & Output net capacitance (pf)\\
+\texttt{values} & Delay matrix in (ns) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\textbf{Using the LUT:}
+
+For input slew = 0.01 ns and output load = 0.0005 pF:
+\begin{itemize}
+    \item Lookup delay at (index\_1[2], index\_2[2])
+    \item This becomes the cell delay in timing path calculation
+\end{itemize}
+
+
+\textbf{Power Modeling:}
+
+% \begin{lstlisting}[caption={Internal Power LUT (Conceptual)}]
+% internal_power() {
+%   related_pin : "A" ;
+%   rise_power(energy_template_5x5) {
+%     index_1 ("0.01, 0.05, 0.1, 0.3, 0.5");
+%     index_2 ("0.001, 0.005, 0.01, 0.03, 0.05");
+%     values ( \
+%       "0.0012, 0.0015, 0.0018, 0.0024, 0.0030", \
+%       ...
+%     );
+%   }
+% }
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.75\textwidth]{pinab.png}
+        \includegraphics[width=0.75\textwidth]{pinx.png}
+        % \includegraphics[width=0.85\textwidth]{celldef.png}
+    }}
+    \caption{Liberty LookUp Table (LUT)}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+\noindent \textbf{Energy values are in picojoules (pJ).} \\
+% \textbf{Source:} \path{OpenLane/designs/matrix_chip/runs/RUN_2026.02.12_13.32.27/issue_reproducible/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib}
+
+
+
+\textit{(Source: \\
+\texttt{OpenLane/designs/matrix\_chip/runs/RUN\_2026.02.12\_13.32.27/} \\
+\texttt{issue\_reproducible/pdk/sky130A/libs.ref/sky130\_fd\_sc\_hd/} \\
+\texttt{lib/sky130\_fd\_sc\_hd\_\_tt\_025C\_1v80.lib})}
+
+
+
+\newpage
+
+\subsection{SDC - Synopsys Design Constraints}
+
+\subsubsection{Introduction}
+
+Synopsys Design Constraints (SDC) files specify timing requirements, clock definitions, and design rules that guide synthesis and place-and-route tools. SDC uses Tcl syntax to define clocks, input/output delays, false paths, and multi-cycle paths. These constraints ensure the physical implementation meets system-level timing specifications, such as interfacing with external devices at specific frequencies or accounting for board-level trace delays.
+
+Unlike timing reports which show achieved performance, SDC files define required performance. The design flow iterates until all SDC constraints are satisfied (positive slack on all paths). Proper SDC creation is critical: overly aggressive constraints may be impossible to meet, while overly relaxed constraints may allow a non-functional chip.
+
+\subsubsection{Example Constraints from Design}
+
+% \textbf{Source:} \texttt{top.sdc}
+
+% \begin{lstlisting}[caption={Clock Definition from top.sdc}]
+% create_clock [get_ports clk] -name clk -period 10.0
+% set_clock_uncertainty 0.25 [get_clocks clk]
+% set_clock_transition 0.15 [get_clocks clk]
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{sdc1.png}
+    }}
+    \caption{Clock Definition from top.sdc}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+
+
+
+\textbf{Analysis:}
+
+\begin{itemize}
+    \item \textbf{Clock period: 10.0 ns} → Target frequency of 100 MHz
+    \item \textbf{Clock uncertainty: 0.25 ns} → Accounts for jitter and skew (2.5\% of period)
+    \item \textbf{Clock transition: 0.15 ns} → Maximum slew rate at clock port
+\end{itemize}
+
+The uncertainty budget is subtracted from the clock period during timing analysis:
+\begin{align}
+    t_{\text{available}} = 10.0 - 0.25 = 9.75 \text{ ns}
+\end{align}
+\newpage
+\textbf{Input/Output Delays:}
+
+% \begin{lstlisting}[caption={I/O Timing Constraints}]
+% set_input_delay 2.0 -clock clk [all_inputs]
+% set_output_delay 2.0 -clock clk [all_outputs]
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{sdc2.png}
+    }}
+    \caption{I/O Timing Constraints}
+    \label{fig:system_block}
+\end{figure}
+
+
+These constraints model external timing:
+\begin{itemize}
+    \item \textbf{Input delay:} Assumes external device launches data 2 ns after clock edge
+    \item \textbf{Output delay:} Assumes external device requires data 2 ns before its clock edge
+\end{itemize}
+
+This tightens internal timing budget to $10.0 - 2.0 - 2.0 = 6.0$ ns for I/O paths.
+
+\textbf{Environmental Constraints:}
+% \begin{lstlisting}[caption={Operating Conditions}]
+% set_driving_cell -lib_cell sky130_fd_sc_hd__inv_2 [all_inputs]
+% set_load 33.442 [all_outputs]
+% \end{lstlisting}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{sdc3.png}
+    }}
+    \caption{Operating Conditions}
+    \label{fig:system_block}
+\end{figure}
+
+\textit{(Source: \texttt{results/final/sdc/top.sdc})}
+
+
+
+
+
+\newpage
+\subsection{SDF - Standard Delay Format}
+
+\subsubsection{Introduction}
+
+Standard Delay Format (SDF) files contain back-annotated timing delays for gate-level simulation. While Liberty libraries provide delay lookup tables, SDF files contain the actual computed delays for each cell instance in the design, accounting for actual fanout, routing parasitics, and operating conditions. SDF enables cycle-accurate simulation that matches silicon timing behavior.
+
+The SDF generation process combines Liberty cell delays with SPEF interconnect delays. For each timing arc (e.g., CLK→Q of a flip-flop), the tool calculates delay based on the instance's input slew (from driver) and output load (from SPEF). This produces an SDF file where every gate has specific delay values rather than lookup tables.
+
+\subsubsection{File Structure and Usage}
+
+\textbf{Source:} \texttt{results/signoff/top.sdf}
+
+\textbf{Example - Cell Delay Annotation:}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+        \includegraphics[width=0.85\textwidth]{sdf.png}
+    }}
+    \caption{SDF Delay Entry (Typical Structure)}
+    \label{fig:sdf_entry}
+\end{figure}
+
+\textbf{Analysis:}
+
+\begin{table}[H]
+\centering
+\caption{SDF Delay Interpretation}
+\label{tab:sdf_delays}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Entry} & \textbf{Value (ns)} & \textbf{Meaning} \\
+\midrule
+IOPATH CLK→Q (rise) & 0.543 & Clock-to-Q delay for rising output \\
+IOPATH CLK→Q (fall) & 0.495 & Clock-to-Q delay for falling output \\
+SETUP & 0.082 & Minimum D stable before CLK \\
+HOLD & -0.051 & Minimum D stable after CLK \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The triple colon notation (0.543:0.543:0.543) represents (min:typical:max) delay values. In this case, all three corners have the same value, indicating a single-corner extraction.
+\newpage
+\textbf{Interconnect Delay:}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+        \includegraphics[width=0.85\textwidth]{Screenshot 2026-02-16 222631.png}
+    }}
+    \caption{SDF Interconnect Delay}
+    \label{fig:sdf_interconnect}
+\end{figure}
+
+This specifies 0.007 ns delay for the wire connecting flip-flop \_18376\_ output Q to gate \_13399\_ input A. This value comes from SPEF extraction using the Elmore Delay approximation:
+
+\begin{equation}
+    t_{\text{wire}} \approx 0.69 \times R_{\text{net}} \times C_{\text{net}}
+\end{equation}
+
+\textbf{Derivation of the 0.69 Factor:}
+
+The factor 0.69 is derived from the charging equation of a first-order RC circuit. The voltage $V(t)$ across the load capacitor is given by:
+
+\begin{equation}
+    V(t) = V_{DD} \left( 1 - e^{-\frac{t}{RC}} \right)
+\end{equation}
+
+In digital timing analysis, the propagation delay ($t_{pd}$) is defined as the time taken for the signal to reach \textbf{50\%} of the supply voltage ($0.5 V_{DD}$). Substituting this into the equation:
+
+\begin{align}
+    0.5 &= 1 - e^{-\frac{t}{RC}} \nonumber \\
+    e^{-\frac{t}{RC}} &= 0.5 \nonumber \\
+    -\frac{t}{RC} &= \ln(0.5) \approx -0.693
+\end{align}
+
+Thus, the wire delay is approximated as:
+\begin{equation}
+    t \approx 0.69 RC
+\end{equation}
+
+This confirms that the delays in the SDF file are physically grounded in the parasitic resistance and capacitance values extracted from the layout.
+
+\newpage
+\subsection{SPICE Netlist}
+
+\subsubsection{Introduction}
+
+SPICE (Simulation Program with Integrated Circuit Emphasis) netlists are circuit description files used for analog circuit simulation. In the context of digital VLSI design, SPICE netlists can exist at two abstraction levels: (1) transistor-level netlists containing explicit MOSFET instances with W/L parameters for accurate characterization, and (2) flat gate-level netlists containing only standard cell instances for hierarchical LVS verification.
+
+The SPICE netlist generated by Magic's layout extraction tool (\texttt{top.spice}) represents the physical layout as a flat list of standard cell instances with their interconnections. Unlike transistor-level SPICE used for cell characterization, this netlist uses black-box cell definitions that abstract away internal transistor structure. This format serves primarily for Layout-versus-Schematic (LVS) verification, where the extracted layout connectivity is compared against the synthesized gate-level netlist to ensure they match exactly.
+
+\subsubsection{File Structure and Analysis}
+
+% \textbf{Source:} \texttt{top.spice} (Magic layout-extracted netlist)
+
+\textbf{Example - Header and Black-Box Definitions:}
+
+% \begin{lstlisting}[caption={SPICE Netlist Header from top.spice (Lines 1-13)}]
+% * NGSPICE file created from top.ext - technology: sky130A
+
+% * Black-box entry subcircuit for sky130_fd_sc_hd__decap_6 abstract view
+% .subckt sky130_fd_sc_hd__decap_6 VGND VNB VPB VPWR
+% .ends
+
+% * Black-box entry subcircuit for sky130_fd_sc_hd__fill_1 abstract view
+% .subckt sky130_fd_sc_hd__fill_1 VGND VNB VPB VPWR
+% .ends
+
+% * Black-box entry subcircuit for sky130_fd_sc_hd__clkbuf_4 abstract view
+% .subckt sky130_fd_sc_hd__clkbuf_4 A VGND VNB VPB VPWR X
+% .ends
+% \end{lstlisting}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{spice1.png}
+    }}
+    \caption{PICE Netlist Header from top.spice}
+    \label{fig:system_block}
+\end{figure}
+
+\textbf{Significance:}
+
+The header comment indicates this netlist was extracted from Magic's intermediate format (\texttt{.ext}) using the SkyWater 130nm PDK technology rules. Each black-box subcircuit definition provides only the pin interface (port names) without internal transistor structure. This abstraction is intentional: the netlist is used for connectivity verification, not circuit-level simulation.
+
+The pins include:
+\begin{itemize}
+    \item \textbf{Signal pins:} A, X, Y (inputs/outputs)
+    \item \textbf{Power pins:} VPWR (VDD), VGND (ground)
+    \item \textbf{Body terminals:} VNB (NMOS bulk), VPB (PMOS bulk)
+\end{itemize}
+
+Body terminal connections are critical for proper latchup prevention in CMOS designs. All NMOS transistors in a cell connect their bulk terminals to VGND, while PMOS bulks connect to VPWR.
+\newpage
+\textbf{Example - Top-Level Module Instantiation:}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{spice2.png}
+    }}
+    \caption{Top-Level Circuit from top.spice}
+    \label{fig:system_block}
+\end{figure}
+
+
+
+\begin{lstlisting}
+ ... (256 total ports) ...
+\end{lstlisting}
+
+The top-level module has 256 ports: 2 power/ground, 3 control signals (clk, done, rst), and 256 data outputs (16 result buses × 16 elements each). The ``+'' continuation character indicates the port list continues on the next line.
+
+\textbf{Example - Standard Cell Instances:}
+
+% \begin{lstlisting}[caption={Cell Instantiation Examples from top.spice}]
+% X_09671_ arr.b23[7] VGND VGND VPWR VPWR _02966_ 
+% + sky130_fd_sc_hd__clkbuf_4
+
+% Xhold340 buf_a.mem[4][2] VGND VGND VPWR VPWR net881 
+% + sky130_fd_sc_hd__dlygate4sd3_1
+
+% X_17622_ clknet_leaf_134_clk _01486_ VGND VGND VPWR VPWR 
+% + buf_a.mem[14][2] sky130_fd_sc_hd__dfxtp_1
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+        \centering
+
+        \includegraphics[width=0.85\textwidth]{spice3.png}
+        \includegraphics[width=0.85\textwidth]{spice4.png}
+        \includegraphics[width=0.9\textwidth]{spice5.png}
+    }}
+    \caption{Cell Instantiation Examples from top.spice}
+    \label{fig:system_block}
+\end{figure}
+\textit{(Source: \texttt{results/results/final/spi/lvs/top.spice})}
+
+\textbf{Detailed Analysis:}
+
+\begin{table}[H]
+\centering
+\caption{SPICE Instance Syntax Breakdown}
+\label{tab:spice_instance}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Field} & \textbf{Interpretation} \\
+\midrule
+\texttt{X\_09671\_} & Instance name (synthesized identifier) \\
+\texttt{arr.b23[7]} & Input signal connection (array element) \\
+\texttt{VGND VGND} & Ground connections (signal + bulk) \\
+\texttt{VPWR VPWR} & Power connections (signal + bulk) \\
+\texttt{\_02966\_} & Output net name (internal net) \\
+\texttt{sky130\_fd\_sc\_hd\_\_clkbuf\_4} & Cell type (4× drive buffer) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The doubled power/ground connections (\texttt{VGND VGND}, \texttt{VPWR VPWR}) provide separate supply and bulk terminal connections. This is standard practice in modern CMOS: functional supply pins carry current, while bulk terminals establish substrate biasing for transistor operation.
+
+\textbf{Special Cell Types Present:}
+
+\begin{enumerate}
+    \item \textbf{Filler cells} (\texttt{XFILLER\_*}): Inserted to maintain continuous N-well and substrate connections across rows. Fillers have no logical function but are essential for manufacturability and latchup prevention.
+    
+    \item \textbf{Decap cells} (\texttt{sky130\_fd\_sc\_hd\_\_decap\_*}): Decoupling capacitors distributed across the layout to suppress power supply noise. These cells contain large parallel PMOS/NMOS transistors acting as capacitors.
+    
+    \item \textbf{Tap cells} (\texttt{XTAP\_*}, \texttt{sky130\_fd\_sc\_hd\_\_tapvpwrvgnd\_1}): Provide substrate and N-well taps at regular intervals (typically every few microns) to ensure low-resistance paths to power/ground. Critical for preventing latchup.
+    
+    \item \textbf{Hold buffers} (\texttt{Xhold*}, \texttt{sky130\_fd\_sc\_hd\_\_dlygate4sd3\_1}): Delay gates inserted during physical design to fix hold timing violations. These buffers add delay to paths where data arrives too quickly after the clock edge.
+\end{enumerate}
+
+\textbf{Netlist Statistics:}
+
+\begin{table}[H]
+\centering
+\caption{Extracted Netlist Statistics}
+\label{tab:spice_stats}
+\begin{tabular}{@{}lrl@{}}
+\toprule
+\textbf{Component Type} & \textbf{Count} & \textbf{Purpose} \\
+\midrule
+Total lines & 42,583 & Complete netlist size \\
+Functional cells & ~11,362 & Logic gates and flip-flops \\
+Filler cells & ~6,663 & Well/substrate continuity \\
+Decap cells & ~18,785 & Power supply decoupling \\
+Tap cells & ~4,815 & Substrate/well connections \\
+\midrule
+\textbf{Total instances} & \textbf{~41,724} & Matches DEF component count \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These counts align with the metrics reported in the DEF file (Section~\ref{subsec:def}), confirming successful extraction: the physical layout contains 41,724 total cell instances, of which 11,362 are functional logic cells and the remainder are physical-only cells (fillers, decaps, taps) that have no counterpart in the logical netlist.
+
+\textbf{LVS Verification Process:}
+
+\begin{enumerate}
+    \item Magic extracts connectivity from GDS layout → generates \texttt{top.spice}
+    \item Netgen reads \texttt{top.spice} (layout) and \texttt{top\_nl.v} (logical netlist)
+    \item Netgen filters out physical-only cells (fillers, decaps, taps)
+    \item Netgen performs graph isomorphism check on remaining 11,362 functional cells
+    \item Result: \texttt{Circuits MATCH uniquely} (zero net or pin mismatches)
+\end{enumerate}
+
+\textbf{Why No Parasitics in This File?}
+
+This SPICE netlist contains only connectivity information (which cells connect to which nets), not parasitic RC values. Parasitics are stored separately in the SPEF file (Section~\ref{subsec:spef}) because:
+
+\begin{itemize}
+    \item SPICE netlists are primarily for LVS, which only checks connectivity
+    \item Parasitic extraction is computationally expensive and produces massive datasets
+    \item SPEF format is optimized for timing tools, while SPICE format is for LVS/simulation
+    \item Separating concerns allows independent re-extraction if layout changes
+\end{itemize}
+
+For timing-aware simulation, the SPEF parasitics would be back-annotated alongside this SPICE netlist, or more commonly, the SDF delay annotations (derived from SPEF) are applied to the Verilog gate-level netlist instead.
+
+\textbf{Comparison: Transistor-Level vs Layout-Extracted SPICE:}
+
+\begin{table}[H]
+\centering
+\caption{SPICE Netlist Abstraction Levels}
+\label{tab:spice_comparison}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Aspect} & \textbf{Transistor-Level} & \textbf{Layout-Extracted (This File)} \\
+\midrule
+Purpose & Cell characterization & LVS verification \\
+Content & Explicit MOSFETs & Black-box cell instances \\
+Parasitics & R/C extracted from layout & Separate SPEF file \\
+Simulation & Accurate analog analysis & Connectivity check only \\
+Size & ~100 lines per cell & ~42K lines total design \\
+Tools & SPICE simulators & Netgen, Magic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\newpage
+\subsection{MAG - Magic Layout File}
+
+\subsubsection{Introduction}
+
+Magic (.mag) files are the native layout format for the Magic VLSI layout tool, an open-source layout editor widely used with SkyWater PDK. Unlike GDSII which is a manufacturing-focused binary format, .mag files are human-readable and optimized for interactive editing and DRC checking. Magic files store layout geometry as rectangles on various layers (metal, poly, diffusion) along with cell instance placements and properties.
+
+Magic is particularly valuable in the OpenLane flow for: (1) performing DRC verification with SkyWater-specific rules, (2) extracting SPICE netlists from layout, (3) visualizing routed designs for debugging, and (4) generating GDS files for tape-out. The .mag format preserves hierarchy and allows parameterized cells, making it more flexible than GDS for design exploration.
+
+\subsubsection{File Contents and Usage}
+
+% \textbf{Source:} \texttt{top.mag}
+
+\textbf{Typical Structure:}
+
+% \begin{lstlisting}[caption={Magic Layout File (Conceptual)}]
+% magic
+% tech sky130A
+% timestamp 1644537600
+% << metal1 >>
+% rect 100 200 300 250
+% rect 400 200 600 250
+% << metal2 >>
+% rect 200 100 250 500
+% rect 450 100 500 500
+% << via1 >>
+% rect 200 200 250 250
+% rect 450 200 500 250
+% << labels >>
+% rlabel metal1 150 225 150 225 1 clk
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+
+        \includegraphics[width=0.5\textwidth]{mag1.png}
+    }}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+
+
+        \includegraphics[width=0.5\textwidth]{mag2.png}
+
+    }}
+
+\end{figure}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+
+
+        \includegraphics[width=0.5\textwidth]{mag33.png}
+
+    }}
+
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+
+        \includegraphics[width=0.85\textwidth]{mag4.png}
+    }}
+    \caption{Magic Layout File (Conceptual)}
+    \label{fig:system_block}
+\end{figure}
+
+
+\textit{(Source: \texttt{results/final/mag/top.mag})}
+
+\
+\textbf{Layer Definitions:}
+
+\begin{itemize}
+    \item \textbf{metal1, metal2:} Routing metal layers
+    \item \textbf{via1:} Connections between metal layers
+    \item \textbf{poly:} Polysilicon gate material
+    \item \textbf{diff:} Diffusion regions (source/drain)
+\end{itemize}
+
+\textbf{DRC Checking:}
+
+Magic can perform comprehensive DRC using SkyWater rules:
+
+\begin{lstlisting}[language=bash,caption={Running DRC in Magic}]
+magic -dnull -noconsole -rcfile sky130A.magicrc top.mag << EOF
+  drc check
+  drc catchup
+  set drcresult [drc listall why]
+  puts "DRC violations: [llength $drcresult]"
+  quit -noprompt
+EOF
+\end{lstlisting}
+
+\textbf{GDSII Export:}
+
+\begin{lstlisting}[language=bash,caption={Generating GDSII from Magic}]
+magic -dnull -noconsole top.mag << EOF
+  gds write top.gds
+  quit -noprompt
+EOF
+\end{lstlisting}
+
+This converts the .mag layout to industry-standard GDSII for fabrication.
+
+\newpage
+
+\subsection{Verilog Netlist}
+
+\subsubsection{Introduction}
+
+Verilog netlists represent the design at different abstraction levels throughout the flow. The RTL Verilog (\texttt{top.v}) describes behavior with high-level constructs like \texttt{always} blocks and arithmetic operators. The gate-level netlist (\texttt{top\_nl.v}) resulting from synthesis instantiates only standard cells with explicit interconnections. Both representations are functionally equivalent but differ in simulability and timing accuracy.
+
+The gate-level netlist serves multiple purposes: (1) functional verification against RTL using equivalence checking, (2) gate-level simulation with SDF back-annotation for timing verification, (3) input to place-and-route tools for physical implementation, and (4) documentation of the actual synthesized logic.
+
+\subsubsection{RTL vs Gate-Level Comparison}
+
+% \textbf{RTL Source:} \texttt{top.v}
+
+
+\begin{lstlisting}[style=verilog,caption={Top-Level Integration with Skewing Logic (Excerpt)},label={lst:top}]
+module top (
+    input logic clk, rst,
+    input logic s_axis_a_valid, s_axis_b_valid,
+    output logic s_axis_a_ready, s_axis_b_ready,
+    input logic [7:0] s_axis_a_data, s_axis_b_data,
+    input logic start_compute,
+    output logic done,
+    output logic [31:0] result00, result01, result02, result03,
+    // ... other results ...
+);
+
+logic [7:0] raw_a0, raw_a1, raw_a2, raw_a3;
+logic [7:0] raw_b0, raw_b1, raw_b2, raw_b3;
+
+// Delay registers for systolic skewing
+logic [7:0] a1_d1;
+logic [7:0] a2_d1, a2_d2;
+logic [7:0] a3_d1, a3_d2, a3_d3;
+logic [7:0] b1_d1;
+logic [7:0] b2_d1, b2_d2;
+logic [7:0] b3_d1, b3_d2, b3_d3;
+
+// Buffer instantiations
+buffer buf_a (/* connections */);
+buffer buf_b (/* connections */);
+
+// Delay implementation
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        a1_d1 <= 0;
+        a2_d1 <= 0; a2_d2 <= 0;
+        a3_d1 <= 0; a3_d2 <= 0; a3_d3 <= 0;
+    end else begin
+        a1_d1 <= raw_a1;
+        a2_d1 <= raw_a2; a2_d2 <= a2_d1;
+        a3_d1 <= raw_a3; a3_d2 <= a3_d1; a3_d3 <= a3_d2;
+    end
+end
+// Systolic array instantiation
+systolic_array arr (
+    .clk(clk), .rst(rst),
+    .a0(raw_a0), .a1(a1_d1), .a2(a2_d2), .a3(a3_d3),
+    .b0(raw_b0), .b1(b1_d1), .b2(b2_d2), .b3(b3_d3),
+    .result00(result00), /* ... other results ... */
+);
+endmodule
+\end{lstlisting}
+% \textbf{RTL Source:} \texttt{top.v}
+\textit{(RTL Source: \texttt{top.v})}
+
+
+\textbf{Gate-Level Netlist:} \texttt{top\_nl.v}
+
+% \begin{lstlisting}[language=Verilog,caption={Synthesized Gate-Level Netlist (Excerpt)}]
+% module pe (
+%     clk, rst, a_in, b_in, a_out, b_out, result_out
+% );
+%   input clk; input rst;
+%   input [7:0] a_in; input [7:0] b_in;
+%   output [7:0] a_out; output [7:0] b_out;
+%   output [31:0] result_out;
+  
+%   wire _0123_, _0124_, _0125_;
+%   wire [31:0] _0256_;
+  
+%   sky130_fd_sc_hd__dfrtp_4 _1234_ (
+%     .CLK(clk),
+%     .RESET_B(rst),
+%     .D(_0256_[0]),
+%     .Q(result_out[0])
+%   );
+  
+%   sky130_fd_sc_hd__and2_1 _1235_ (
+%     .A(a_in[0]),
+%     .B(b_in[0]),
+%     .X(_0123_)
+%   );
+  
+%   sky130_fd_sc_hd__xor2_1 _1236_ (
+%     .A(_0123_),
+%     .B(result_out[0]),
+%     .X(_0256_[0])
+%   );
+  
+%   // ... thousands more gates ...
+% endmodule
+% \end{lstlisting}
+
+
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{1.0\textwidth}{
+    
+
+        \includegraphics[width=0.6\textwidth]{netlist1.png}
+    }}
+    
+\end{figure}
+
+
+\begin{figure}[H]
+
+    \fbox{\parbox{1.0\textwidth}{
+
+
+        \includegraphics[width=0.6\textwidth]{netlist2.png}
+        
+    \caption{Synthesized Gate-Level Netlist (Excerpt)}
+    \label{fig:system_block}
+    }}
+
+\end{figure}
+\textit{(Source: \texttt{results/verilog/gl/top.v})}
+
+
+
+
+
+
+\textbf{Key Differences:}
+
+\begin{table}[H]
+\centering
+\caption{RTL vs Gate-Level Comparison}
+\label{tab:rtl_vs_gate}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Aspect} & \textbf{RTL} & \textbf{Gate-Level} \\
+\midrule
+Abstraction & Behavioral & Structural \\
+Elements & always blocks & Cell instances \\
+Multiply operator & \texttt{a\_in * b\_in} & Adder tree (100+ gates) \\
+Timing & Zero-delay & SDF back-annotated \\
+Size & ~100 lines & ~10,000 lines \\
+Verification & Fast simulation & Slower but accurate \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+
+
+
+\subsection{Conclusion}
+
+Proficiency in interpreting these file formats—LEF, DEF, SPEF, LIB, SDC, SDF, SPICE, MAG, Verilog, and VCD—is essential for debugging, optimizing, and verifying VLSI designs. Each format captures different aspects of the design: physical geometry (LEF/DEF/MAG), electrical parasitics (SPEF/SPICE), timing models (LIB/SDF), constraints (SDC), and functional behavior (Verilog/VCD). Together, they provide complete visibility from RTL specification through fabrication-ready layout.
+
+The examples presented from this design demonstrate real-world usage: analyzing power grid structures in LEF, calculating interconnect delays from SPEF, understanding Liberty timing models, and debugging with VCD waveforms. Mastery of these formats accelerates design iteration and enables data-driven optimization decisions.
+
+
+
+
+
+
+
+
+
+
+% ====================================
+% CHAPTER 4: SYNTHESIS
+% ====================================
+\section{Logic Synthesis}
+
+\subsection{Synthesis Flow and Constraints}
+
+Logic synthesis transforms the RTL description into a gate-level netlist using standard cells from the SkyWater 130nm PDK.
+
+\subsubsection{Synthesis Tool and Settings}
+
+\textbf{Tool:} Yosys (open-source synthesis engine)
+
+\textbf{Standard Cell Library:} \texttt{sky130\_fd\_sc\_hd} (High-Density standard cells)
+
+\textbf{Synthesis Strategy:} Area-optimized (AREA 0 strategy)
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Screenshot 2026-02-15 060016.png}
+    \caption{Sky130 High-Density Library Operating Conditions and Default Units.}
+    \label{fig:floorplan}
+\end{figure}
+\newpage
+\subsubsection{Design Constraints}
+
+Synthesis constraints were specified through the OpenLane configuration file:
+
+\begin{lstlisting}[language=JSON,caption={OpenLane Configuration (config.json)}]
+
+    {
+    "DESIGN_NAME": "top",
+    "VERILOG_FILES": [
+        "dir::src/top.sv",
+        "dir::src/control_unit.sv",
+        "dir::src/buffer.sv",
+        "dir::src/systolic_array.sv",
+        "dir::src/pe.sv"
+    ],
+    "CLOCK_PORT": "clk",
+    "CLOCK_PERIOD": 10.0,
+    "DIE_AREA": "0 0 600 600",
+    "FP_SIZING": "absolute",
+    "FP_PDN_VOFFSET": 0,
+    "FP_PDN_VPITCH": 30,
+    "FP_PDN_HOFFSET": 0,
+    "FP_PDN_HPITCH": 30,
+    "RUN_LINTER": 0
+}
+\end{lstlisting}
+
+\textbf{Timing Constraints:}
+\begin{itemize}
+    \item Clock period: 10.0 ns (100 MHz target frequency)
+    \item Input delay: 2.0 ns
+    \item Output delay: 2.0 ns
+\end{itemize}
+
+\newpage
+
+\subsection{Synthesis Results}
+
+\subsubsection{Gate-Level Statistics}
+
+\begin{table}[H]
+\centering
+\caption{Synthesis Statistics Summary}
+\label{tab:synth_stats}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total Cells & 9,900 \\
+Flip-Flops & 1,146 \\
+Combinational Cells & 8,754 \\
+Hierarchical Modules & 17 (16 PEs + top) \\
+Chip Area & $105462.396800 \, \mu\text{m}^2 \approx 0.105 \, \text{mm}^2$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{(Source: reports/1-synthesis.AREA\_0.stat.rpt)}
+
+\textbf{Major Cell Types:}
+\begin{itemize}
+    \item Flip-Flops (dfrtp\_2, dfxtp\_2): 1,146 total
+    \item XNOR gates (xnor2\_2): 767 (used in multipliers)
+    \item Buffers (buf\_1): 751
+    \item AND/NAND/OR/NOR gates: ~2,900 combined
+    \item Multiplexers (mux2\_2): 272
+\end{itemize}
+
+\subsubsection{Gate-Level Schematic}
+
+The synthesis tool generated a gate-level schematic for visualization of the logic structure.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{pe_logic_diagram.png}
+    \caption{Gate-level schematic of a single Processing Element (PE)}
+    \label{fig:gate_schematic}
+\end{figure}
+
+\textbf{Observations:}
+\begin{itemize}
+    \item 8×8 multiplication mapped to combinational logic
+    \item 32-bit accumulator uses flip-flops and adder structure
+    \item Data forwarding paths are simple register-to-register connections
+    \item Clock distribution to all 1,146 flip-flops
+\end{itemize}
+
+\newpage
+
+% ====================================
+% CHAPTER 5: PHYSICAL DESIGN
+% ====================================
+\section{Physical Design Implementation}
+
+Physical design (backend) transforms the synthesized gate-level netlist into a manufacturable silicon layout. This process includes floorplanning, placement, clock tree synthesis, and routing.
+
+\subsection{Design Flow Overview}
+
+\begin{tcolorbox}[colback=blue!5,colframe=blue!75!black,title=OpenLane Physical Design Flow]
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Floorplanning:} Define die area, place I/O pins, create power grid
+    \item \textbf{Placement:} Position standard cells in rows within core area
+    \item \textbf{Clock Tree Synthesis (CTS):} Build balanced clock distribution network
+    \item \textbf{Routing:} Connect all logic using metal interconnect layers
+    \item \textbf{Sign-off:} Verify DRC/LVS, extract parasitics, final timing analysis
+\end{enumerate}
+\end{tcolorbox}
+
+\textbf{Tools Used:}
+\begin{itemize}
+    \item \textbf{OpenLane:} Automated RTL-to-GDSII flow framework
+    \item \textbf{OpenROAD:} Placement, CTS, global routing
+    \item \textbf{TritonRoute:} Detailed routing engine
+    \item \textbf{Magic:} DRC/LVS verification and GDSII generation
+    \item \textbf{Netgen:} Circuit-level LVS verification
+\end{itemize}
+
+\newpage
+
+\subsection{Floorplanning}
+
+\subsubsection{Objectives}
+Floorplanning establishes the physical framework for the design by defining the die boundary, placing I/O pins, and constructing the Power Distribution Network (PDN).
+
+\subsubsection{Floorplan Specifications}
+
+\begin{table}[H]
+\centering
+\caption{Floorplan Parameters}
+\label{tab:floorplan}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Die Area & 600 µm × 600 µm (0.36 mm²) \\
+Core Area & ~582 µm × 582 µm (0.34 mm²) \\
+Aspect Ratio & 1.0 (square die) \\
+Core Utilization Target & 50\% \\
+I/O Pin Placement & Random equidistant (periphery) \\
+Power Stripe Pitch & 30 µm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Power Distribution Network (PDN)}
+
+The PDN ensures uniform power (VDD) and ground (VSS) delivery to all standard cells, minimizing IR drop and electromigration.
+
+\textbf{PDN Structure:}
+\begin{itemize}
+    \item \textbf{Power Rings:} Surround core area (Metal 4/5)
+    \item \textbf{Vertical Stripes:} Span die height (Metal 4)
+    \item \textbf{Horizontal Stripes:} Span die width (Metal 5)
+    \item \textbf{Standard Cell Rails:} Met1 rails connect cells to stripes via vias
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{floorplanning.png}
+    \caption{Floorplan showing die area and Power Distribution Network}
+    \label{fig:floorplan}
+\end{figure}
+
+\newpage
+
+\subsection{Standard Cell Placement}
+
+\subsubsection{Placement Strategy}
+
+Placement assigns physical locations to all standard cells within the core area, optimizing for wire length and routability.
+
+\textbf{Tool:} OpenROAD (RePLace + OpenDP)
+
+\textbf{Optimization Objectives:}
+\begin{enumerate}
+    \item Minimize total wire length (Half-Perimeter Wire Length - HPWL)
+    \item Avoid routing congestion
+    \item Respect cell density constraints
+    \item Maintain timing-driven placement for critical paths
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Screenshot 2026-02-14 212001.png}
+    \caption{Standard cell placement - full chip view}
+    \label{fig:placement_full}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Screenshot 2026-02-14 212026.png}
+    \caption{Standard cell placement - zoomed view showing brick-wall pattern}
+    \label{fig:placement_zoom}
+\end{figure}
+
+\textbf{Observations:}
+\begin{itemize}
+    \item Cells organized in horizontal rows with consistent height
+    \item Dense placement in center with routing channels
+    \item No placement violations or overlaps
+    \item Adequate white space for routing
+\end{itemize}
+
+\newpage
+
+\subsection{Clock Tree Synthesis (CTS)}
+
+\subsubsection{Objectives}
+
+Clock Tree Synthesis builds a balanced distribution network to deliver the clock signal to all 1,146 flip-flops with minimal skew and latency.
+
+\textbf{Goals:}
+\begin{itemize}
+    \item \textbf{Low Skew:} Minimize time difference between fastest/slowest paths
+    \item \textbf{Balanced Latency:} Equal insertion delay to all registers
+    \item \textbf{Minimal Power:} Reduce clock network switching power
+    \item \textbf{Timing Closure:} Maintain setup/hold margins
+\end{itemize}
+
+\subsubsection{CTS Results}
+
+\begin{table}[H]
+\centering
+\caption{Clock Tree Synthesis Metrics}
+\label{tab:cts}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total Flip-Flops (Sinks) & 1,146 \\
+\textbf{Clock Skew} & \textbf{0.21 ns} \\
+Min Latency & 0.77 ns \\
+Max Latency & 1.03 ns \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{(Source: reports/13-cts\_sta.skew.rpt)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{cts.png}
+    \caption{Clock Tree Synthesis report excerpt}
+    \label{fig:cts_report}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{cts_without_buffers.png}
+    \caption{Clock distribution before buffer insertion}
+    \label{fig:cts_before}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{clk_buffers_cts.png}
+    \caption{Clock tree after buffer insertion showing balanced latency}
+    \label{fig:cts_after}
+\end{figure}
+
+\textbf{Analysis:}
+\begin{itemize}
+    \item Clock skew of 0.21 ns is excellent for 100 MHz operation (2.1\% of period)
+    \item Balanced latency distribution provides uniform timing
+    \item Clock tree buffers strengthen signal and reduce slew
+\end{itemize}
+
+\newpage
+
+\subsection{Routing}
+
+\subsubsection{Routing Objectives}
+
+Routing connects all placed cells using metal interconnect layers, following design rules to ensure manufacturability.
+
+\textbf{Goals:}
+\begin{itemize}
+    \item Connect all nets without shorts or opens
+    \item Minimize wire length and via count
+    \item Avoid DRC violations (spacing, width, antenna)
+    \item Meet timing constraints considering wire delay
+\end{itemize}
+
+\subsubsection{Routing Flow}
+
+\textbf{Two-Stage Process:}
+
+\begin{enumerate}
+    \item \textbf{Global Routing:} Partition die into routing tiles, assign nets to tiles
+    \begin{itemize}
+        \item Tool: OpenROAD FastRoute
+        \item Generates routing guides (approximate paths)
+    \end{itemize}
+    
+    \item \textbf{Detailed Routing:} Create exact metal tracks and vias
+    \begin{itemize}
+        \item Tool: TritonRoute
+        \item Follows guides from global routing
+        \item Resolves DRC violations iteratively
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Metal Stack (Sky130):}
+\begin{itemize}
+    \item \textbf{Li1 (Local Interconnect):} Connects cells to routing layers
+    \item \textbf{Met1:} Horizontal routing (lower layers)
+    \item \textbf{Met2:} Vertical routing
+    \item \textbf{Met3:} Horizontal routing (longer distances)
+    \item \textbf{Met4:} Vertical routing + power stripes
+    \item \textbf{Met5:} Horizontal routing + power stripes
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{routing.png}
+    \caption{Complete routed layout - full die view}
+    \label{fig:routing_full}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Screenshot 2026-02-14 212142.png}
+    \caption{Routing detail showing metal layers and via connections}
+    \label{fig:routing_detail}
+\end{figure}
+
+\textbf{Observations:}
+\begin{itemize}
+    \item Lower layers (Met1/Met2) used for short local connections
+    \item Higher layers (Met4/Met5) used for long-distance routing and power
+    \item Dense routing in array center, sparser at edges
+    \item All DRC violations successfully resolved
+\end{itemize}
+
+\newpage
+% ====================================
+% CHAPTER 6: SIGN-OFF AND VERIFICATION
+% ====================================
+\section{Sign-off and Physical Verification}
+
+Sign-off is the final validation stage ensuring the layout is correct, manufacturable, and matches the original design intent.
+
+\subsection{Parasitic Extraction}
+
+Before final timing analysis, parasitic resistance and capacitance (RC) of all interconnects must be extracted from the routed layout.
+
+\textbf{Tool:} Magic + OpenROAD RCX
+
+\textbf{Output Format:} SPEF (Standard Parasitic Exchange Format)
+
+The extracted parasitics are back-annotated into the timing analysis to obtain the most accurate delay predictions for the fabricated chip.
+
+\subsection{Final Static Timing Analysis (STA)}
+
+Post-route STA includes extracted parasitics for the most accurate timing prediction. Static Timing Analysis verifies that all signal paths in the design can operate correctly at the target clock frequency.
+
+\subsubsection{Setup Timing Analysis (Max Delay)}
+
+Setup timing ensures that data arrives at the destination flip-flop before the clock edge, with sufficient setup time margin.
+
+\textbf{Critical Path Identification:}
+
+The longest combinational path in the design determines the maximum operating frequency. The critical path was identified as:
+
+\begin{tcolorbox}[colback=gray!5,colframe=black,title=Critical Path (Setup)]
+\textbf{Startpoint:} \texttt{\_18376\_} (rising edge-triggered flip-flop clocked by clk)\\
+\textbf{Endpoint:} \texttt{\_18369\_} (rising edge-triggered flip-flop clocked by clk)\\
+\textbf{Path Type:} max (setup)
+\end{tcolorbox}
+
+\textbf{Path Delay Breakdown:}
+
+\begin{table}[H]
+\centering
+\caption{Critical Path Delay Components}
+\label{tab:critical_path}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Component} & \textbf{Delay (ns)} \\
+\midrule
+Clock Network Delay (Launch) & 1.41 \\
+Source Flip-Flop (CLK $\rightarrow$ Q) & 0.52 \\
+Combinational Logic Chain & 5.50 \\
+\midrule
+\textbf{Data Arrival Time} & \textbf{7.43} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The combinational logic path consists of approximately 20 gate stages including:
+\begin{itemize}
+    \item Multiplier logic (NAND, AND gates)
+    \item Adder chain for accumulation (OR, XOR, XNOR gates)
+    \item Data forwarding buffers
+\end{itemize}
+
+\textbf{Timing Constraint Calculation:}
+
+\begin{table}[H]
+\centering
+\caption{Setup Timing Calculation}
+\label{tab:setup_calc}
+\begin{tabular}{@{}lrc@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value (ns)} & \textbf{Description} \\
+\midrule
+Clock Period & 10.00 & Target frequency constraint \\
+Clock Network Delay (Capture) & +1.22 & Destination clock path \\
+Clock Uncertainty & -0.25 & Jitter and skew margin \\
+Clock Reconvergence Pessimism & +0.06 & CRPR removal \\
+Library Setup Time & -0.06 & Flip-flop internal constraint \\
+\midrule
+\textbf{Data Required Time} & \textbf{10.98} & Deadline for data arrival \\
+\textbf{Data Arrival Time} & \textbf{7.43} & Actual data propagation time \\
+\midrule
+\textbf{Setup Slack} & \textbf{+3.55} & \textcolor{green}{\textbf{MET}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Slack Calculation:}
+\begin{align}
+    \text{Setup Slack} &= \text{Data Required Time} - \text{Data Arrival Time} \nonumber \\
+    &= 10.98 \text{ ns} - 7.43 \text{ ns} \nonumber \\
+    &= +3.55 \text{ ns} \quad \textcolor{green}{\checkmark \text{ PASS}}
+\end{align}
+
+\textit{(Source: reports/31-rcx\_sta\_max.rpt)}
+
+\textbf{Analysis:}
+The positive slack of 3.55 ns indicates the design has comfortable timing margin at 100 MHz. The critical path could theoretically operate at:
+
+\begin{align}
+    f_{\text{max}} &= \frac{1}{\text{Data Arrival Time}} = \frac{1}{7.43 \text{ ns}} \nonumber \\
+    &\approx 134.6 \text{ MHz}
+\end{align}
+
+However, the design is conservatively clocked at 100 MHz to account for:
+\begin{itemize}
+    \item Process variation (±10\% delay variation across chips)
+    \item Temperature effects (-40°C to 125°C operating range)
+    \item Voltage droops (IR drop in power grid)
+    \item Aging effects (transistor degradation over 10+ years)
+\end{itemize}
+
+\newpage
+
+\subsubsection{Hold Timing Analysis (Min Delay)}
+
+Hold timing ensures that data remains stable at the flip-flop input for a minimum duration after the clock edge.
+
+\textbf{Hold Constraint:}
+
+Hold violations occur when data changes too quickly after the clock edge, potentially causing metastability or incorrect capture.
+
+\begin{table}[H]
+\centering
+\caption{Hold Timing Summary}
+\label{tab:hold_timing}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Shortest Path Delay & 0.68 ns \\
+Clock Skew & 0.21 ns \\
+Library Hold Time & 0.15 ns \\
+\midrule
+\textbf{Hold Slack} & \textbf{+0.32 ns} \\
+\textbf{Status} & \textcolor{green}{\textbf{MET}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{(Source: reports/31-rcx\_sta\_min.rpt)}
+
+\textbf{Hold Slack Calculation:}
+\begin{align}
+    \text{Hold Slack} &= \text{Data Arrival Time} - \text{Hold Requirement} \nonumber \\
+    &= 0.68 \text{ ns} - (0.15 \text{ ns} - 0.21 \text{ ns}) \nonumber \\
+    &= +0.32 \text{ ns} \quad \textcolor{green}{\checkmark \text{ PASS}}
+\end{align}
+
+The positive hold slack indicates no hold violations exist in the design. The clock tree synthesis successfully balanced the clock network to prevent hold issues.
+
+\subsubsection{Timing Summary}
+
+\begin{table}[H]
+\centering
+\caption{Final Static Timing Analysis Summary}
+\label{tab:final_sta}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Status} \\
+\midrule
+\textbf{Setup Analysis (Max Delay)} & & \\
+Worst Negative Slack (WNS) & 0.00 ns & All paths positive \\
+Total Negative Slack (TNS) & 0.00 ns & No violations \\
+Worst Setup Slack & +3.55 ns & \textcolor{green}{MET} \\
+Critical Path Delay & 7.43 ns & — \\
+Number of Setup Violations & 0 & \textcolor{green}{PASS} \\
+\midrule
+\textbf{Hold Analysis (Min Delay)} & & \\
+Worst Hold Slack & +0.32 ns & \textcolor{green}{MET} \\
+Number of Hold Violations & 0 & \textcolor{green}{PASS} \\
+\midrule
+\textbf{Design Capability} & & \\
+Target Frequency & 100 MHz & \textcolor{green}{MET} \\
+Maximum Frequency & ~135 MHz & 35\% margin \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{(Source: reports/31-rcx\_sta\_summary.rpt)}
+
+\textbf{Interpretation of WNS = 0.00:}
+
+The Worst Negative Slack (WNS) metric reports only \textit{negative} slack values. A WNS of 0.00 indicates that \textbf{all timing paths have positive slack}—this is the desired outcome, not a marginal pass. The actual worst slack is +3.55 ns, confirming robust timing closure.
+
+\textbf{Conclusion:}
+
+The design successfully meets all setup and hold timing constraints at the target 100 MHz frequency with comfortable margins. The 3.55 ns setup slack provides sufficient guardband against process, voltage, and temperature (PVT) variations in silicon.
+
+\newpage
+
+\subsection{Final Power Analysis}
+
+Post-route power analysis includes accurate wire capacitance and clock tree power.
+
+\begin{table}[H]
+\centering
+\caption{Final Power Consumption (Post-Route @ 100 MHz)}
+\label{tab:final_power}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Component} & \textbf{Power (mW)} & \textbf{Percentage} \\
+\midrule
+\textbf{Dynamic Power} & & \\
+\quad Sequential Logic & 11.43 & 44.0\% \\
+\quad Combinational Logic & 14.54 & 56.0\% \\
+\textbf{Leakage Power} & 0.000076 & 0.0\% \\
+\midrule
+\textbf{Total Power} & \textbf{26.0} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{(Source: reports/31-rcx\_sta.power.rpt)}
+
+\textbf{Power Breakdown:}
+\begin{itemize}
+    \item Internal Power: 13.36 mW (51.5\%)
+    \item Switching Power: 12.61 mW (48.5\%)
+    \item Leakage Power: 76.4 nW (negligible)
+\end{itemize}
+
+\textbf{Power Density:}
+\begin{align}
+    \text{Power Density} &= \frac{26.0 \text{ mW}}{0.36 \text{ mm}^2} = 72.2 \text{ mW/mm}^2
+\end{align}
+
+\textbf{Energy per Operation:}
+\begin{align}
+    \text{Energy per MAC} &= \frac{26.0 \text{ mW}}{1.6 \times 10^9 \text{ ops/s}} = 16.25 \text{ pJ/MAC}
+\end{align}
+
+\newpage
+
+\subsection{Design Rule Check (DRC)}
+
+DRC verification ensures the layout follows foundry manufacturing rules.
+
+\textbf{Tool:} Magic DRC
+
+\textbf{DRC Results:}
+\begin{verbatim}
+top
+----------------------------------------
+[INFO]: COUNT: 0
+[INFO]: Should be divided by 3 or 4
+\end{verbatim}
+
+\textit{(Source: reports/drc.rpt)}
+
+\textbf{Result:} \textcolor{green}{\textbf{ZERO violations}} - Layout is manufacturable!
+
+\subsection{Layout vs Schematic (LVS)}
+
+LVS verification confirms the physical layout matches the logical netlist.
+
+\textbf{Tool:} Netgen
+
+\textbf{LVS Results:}
+\begin{verbatim}
+LVS reports no net, device, pin, or property mismatches.
+
+Total errors = 0
+\end{verbatim}
+
+\textit{(Source: reports/39-top.lvs.rpt)}
+
+\textbf{Result:} \textcolor{green}{\textbf{100\% MATCH}} - Layout correctly implements the design!
+
+\newpage
+
+\subsection{Final GDSII Layout}
+
+The GDSII file is the final deliverable containing the complete mask data for fabrication.
+
+\textbf{File:} \texttt{top.gds}
+
+\textbf{Layers:} 50+ layers including metal, via, poly, diffusion, implant, etc.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{routing.png}
+    \caption{Final GDSII layout - complete mask data}
+    \label{fig:final_gds}
+\end{figure}
+
+\textbf{Layout Statistics:}
+\begin{itemize}
+    \item Die area: 600 µm × 600 µm (0.36 mm²)
+    \item Core area: ~582 µm × 582 µm (0.34 mm²)
+    \item Total cells: 11,362 (including physical cells)
+    \item Final cell count with fillers: 41,724
+\end{itemize}
+
+\newpage
+
+% ====================================
+% CHAPTER 7: RESULTS AND ANALYSIS
+% ====================================
+\section{Results and Analysis}
+
+\subsection{Implementation Summary}
+
+The complete RTL-to-GDSII flow has been successfully executed, resulting in a tape-out ready design.
+
+\begin{table}[H]
+\centering
+\caption{Final Implementation Results}
+\label{tab:final_results}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Category} & \textbf{Parameter} & \textbf{Value} \\
+\midrule
+\textbf{Technology} & Process Node & SkyWater 130 nm \\
+& Standard Cell Library & sky130\_fd\_sc\_hd \\
+& Number of Metal Layers & 5 (+ Local Interconnect) \\
+\midrule
+\textbf{Design Size} & Die Area & 600 × 600 µm (0.36 mm²) \\
+& Core Area & ~582 × 582 µm (0.34 mm²) \\
+& Total Cells (Synthesis) & 9,900 \\
+& Total Cells (Final) & 11,362 \\
+& Flip-Flops & 1,146 \\
+\midrule
+\textbf{Performance} & Target Clock Frequency & 100 MHz \\
+& Peak Throughput & 1.6 GOPS (16 MAC/cycle) \\
+& Latency (4×4 matmul) & 27 cycles (270 ns) \\
+\midrule
+\textbf{Power} & Total Power @ 100 MHz & 26.0 mW \\
+& Power Density & 72.2 mW/mm² \\
+& Energy per MAC & 16.25 pJ/MAC \\
+\midrule
+\textbf{Clock} & Clock Skew & 0.21 ns \\
+& Min Latency & 0.77 ns \\
+& Max Latency & 1.03 ns \\
+\midrule
+\textbf{Verification} & DRC Violations & 0 \\
+& LVS Status & PASSED (100\% match) \\
+& Timing Status & MET (100 MHz) \\
+\midrule
+\textbf{Status} & \multicolumn{2}{l}{\textcolor{green}{\textbf{TAPE-OUT READY}}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+\subsection{Performance Analysis}
+
+\subsubsection{Computational Throughput}
+
+\textbf{Theoretical Peak:}
+\begin{align}
+    \text{Peak MACs} &= 16 \text{ PEs} \times 1 \text{ MAC/cycle} \times 100 \times 10^6 \text{ Hz} \nonumber \\
+    &= 1.6 \times 10^9 \text{ MAC ops/s} = 1.6 \text{ GOPS}
+\end{align}
+
+\textbf{Effective Throughput:}
+Accounting for load/drain cycles and data dependencies:
+\begin{align}
+    \text{Effective MACs} &= \frac{16 \text{ MACs}}{27 \text{ cycles}} \times 100 \times 10^6 \text{ Hz} \nonumber \\
+    &\approx 59.3 \times 10^6 \text{ MAC ops/s} = 59.3 \text{ MOPS}
+\end{align}
+
+\subsubsection{Power Efficiency}
+
+\begin{align}
+    \text{Energy per MAC} &= \frac{26.0 \text{ mW}}{1.6 \times 10^9 \text{ ops/s}} = 16.25 \text{ pJ/MAC}
+\end{align}
+
+\textbf{Comparison with CPU:}
+\begin{itemize}
+    \item Typical CPU: 100-1000 pJ/MAC (10-100× more energy)
+    \item This design: 16.25 pJ/MAC
+    \item \textbf{Speedup Factor: 6-61×}
+\end{itemize}
+
+\subsubsection{Area Efficiency}
+
+\begin{align}
+    \text{Throughput per mm}^2 &= \frac{1.6 \text{ GOPS}}{0.36 \text{ mm}^2} = 4.44 \text{ GOPS/mm}^2
+\end{align}
+
+\newpage
+
+\subsection{Comparison with Related Work}
+
+\begin{table}[H]
+\centering
+\caption{Comparison with Other Systolic Array Implementations}
+\label{tab:comparison}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Design} & \textbf{This Work} & \textbf{Google TPUv1} & \textbf{Eyeriss} & \textbf{NVDLA} \\
+\midrule
+Array Size & 4×4 & 256×256 & 12×14 & 16×16 \\
+Technology & 130 nm & 28 nm & 65 nm & 16 nm \\
+Frequency & 100 MHz & 700 MHz & 200 MHz & 1 GHz \\
+Peak TOPS & 0.0016 & 92 & 0.034 & 1.0 \\
+Power & 26.0 mW & 75 W & 278 mW & 1.5 W \\
+\midrule
+\textbf{This Work} & \multicolumn{4}{l}{Academic prototype demonstrating complete flow} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{Note:} This academic design demonstrates the complete RTL-to-GDSII methodology. Commercial designs use more advanced nodes and larger arrays for higher performance.
+
+\newpage
+
+% ====================================
+% CHAPTER 8: CONCLUSION
+% ====================================
+\section{Conclusion}
+
+\subsection{Project Summary}
+
+This project successfully executed the complete RTL-to-GDSII physical design flow for a **4x4 Systolic Array AI Accelerator**. Targeting the open-source **SkyWater 130nm (Sky130)** process node, the design integrates 16 Processing Elements (PEs) with an industry-standard **AXI-Stream** interface, capable of performing INT8 matrix multiplications efficiently.
+
+Starting from a behavioral SystemVerilog description, the design was synthesized, placed, and routed using the **OpenLane** automated flow. The final layout was verified against rigorous manufacturing constraints, ensuring a silicon-ready implementation. The successful generation of the GDSII artifact demonstrates that high-performance custom digital logic can be implemented using entirely open-source EDA tools.
+
+\subsection{Key Technical Achievements}
+
+The project met all design specifications and passed sign-off verification with the following metrics:
+
+\begin{itemize}
+    \item \textbf{Timing Closure:} Achieved a target frequency of \textbf{100 MHz} (10ns period) with positive setup slack, ensuring reliable operation.
+    \item \textbf{Physical Implementation:} Delivered a \textbf{DRC \& LVS Clean} layout with zero geometry or connectivity violations.
+    \item \textbf{Clock Tree Quality:} Minimized clock skew to \textbf{0.21 ns} using an optimized H-Tree distribution network.
+    \item \textbf{Area Efficiency:} Realized a compact core area of \textbf{0.105 $mm^2$} ($105,462 \mu m^2$) with a total cell count of \textbf{9,900}.
+    \item \textbf{Power Integrity:} Implemented a robust Power Distribution Network (PDN) using $1.6 \mu m$ wide stripes on Metal-4/5 to mitigate IR drop.
+    \item \textbf{Robust Verification:} Validated functionality using a dual-approach methodology: standard corner cases (Fixed Inputs) and randomized stress testing (Python-generated matrices).
+\end{itemize}
+\newpage
+\subsection{Competencies Acquired}
+
+This implementation provided comprehensive hands-on experience in the modern VLSI backend flow:
+
+\begin{enumerate}
+    \item \textbf{Architectural Design:} Understanding data reuse and skewing mechanisms in Systolic Arrays for AI workloads.
+    \item \textbf{Physical Design Flow:} Mastery of Floorplanning, I/O Placement, Power Planning, Global/Detailed Routing, and CTS.
+    \item \textbf{Sign-off Analysis:} Proficiency in interpreting standard artifacts including \textbf{LEF} (Physical Abstract), \textbf{DEF} (Layout), \textbf{SPEF} (Parasitics), and \textbf{SDF} (Timing Delays).
+    \item \textbf{EDA Tooling:} Practical expertise with \textbf{OpenLane}, \textbf{Yosys} (Synthesis), \textbf{Magic} (Layout/DRC), and \textbf{Netgen} (LVS).
+\end{enumerate}
+
+\subsection{Future Scope}
+
+While the current design is silicon-ready, future iterations could explore:
+\begin{itemize}
+    \item Scaling the array to $16 \times 16$ or $32 \times 32$ for higher throughput.
+    \item Implementing mixed-precision support (FP16/BF16) for training workloads.
+    \item Integrating an on-chip SRAM buffer to reduce off-chip memory access latency.
+\end{itemize}
+\newpage
+
+\subsection{Design Metrics Summary}
+
+The final implementation results are summarized in Table \ref{tab:final_metrics}. These values represent the sign-off state of the design, extracted directly from the \texttt{top.def}, \texttt{top.sdc}, and timing reports.
+
+\begin{table}[H]
+\centering
+\caption{Final Design Specifications and Quality Metrics}
+\label{tab:final_metrics}
+\begin{tabular}{@{}llp{6cm}@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Technical Context / Derivation} \\
+\midrule
+\textbf{Technology Node} & SkyWater 130nm & Open-source hybrid process PDK \\
+\midrule
+\textbf{Clock Frequency} & 100 MHz & Clock Period $T = 10 \text{ ns}$ (Constraints met with positive slack) \\
+\midrule
+\textbf{Total Cell Count} & 9,900 Cells & Includes 16 PEs, AXI Buffers, and Control Logic (Source: DEF Component count) \\
+\midrule
+\textbf{Total Active Area} & $0.105 \text{ mm}^2$ & Exact: $105,462 \, \mu\text{m}^2$ (Logic + Buffers inside core) \\
+\midrule
+\textbf{Core Utilization} & $\approx 29.3\%$ & $\frac{105,462}{360,000}$ (Leaves ample routing resources for congestion-free layout) \\
+\midrule
+\textbf{Clock Skew} & 0.21 ns & Max latency difference between launch/capture flops ($\approx 2\%$ of period) \\
+\midrule
+\textbf{Power Grid Width} & $1.60 \, \mu\text{m}$ & Wide Metal-4/5 stripes derived from LEF geometry ($9.62 - 8.02$) to mitigate IR drop \\
+\midrule
+\textbf{Sign-off Status} & \textbf{Clean} & \textbf{0} DRC Violations, \textbf{LVS} Match confirmed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Final Remarks}
+
+This project represents a significant technical milestone, bridging the gap between computer architecture theory and silicon reality. By successfully implementing a Google TPU-inspired systolic array on the Sky130 node, the design navigates complex trade-offs between PPA (Power, Performance, Area) and manufacturability.
+
+The use of the open-source OpenLane toolchain democratizes access to advanced VLSI flows, proving that industrial-grade physical design is achievable without expensive proprietary licenses. Most importantly, this work demonstrates that sophisticated AI hardware can be designed, verified, and prepared for fabrication at the academic level, fostering the next generation of hardware architects.
+
+\vspace{1cm}
+
+\end{document}  
